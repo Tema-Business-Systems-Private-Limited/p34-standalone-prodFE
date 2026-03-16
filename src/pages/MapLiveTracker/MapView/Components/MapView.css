@@ -1,0 +1,159 @@
+/* ---------- INFO WINDOW BASE ---------- */
+.info-window {
+  font-family: Arial, sans-serif;
+  padding: 8px;               
+  color: #333;
+}
+
+/* ---------- HEADER ---------- */
+.info-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 8px;          
+}
+
+.info-header .icon {
+  font-size: 22px;              
+  margin-right: 8px;
+  color: #4CAF50;
+}
+
+.info-header h3 {
+  margin: 0;
+  font-size: 16px;            
+  color: #333;
+}
+
+/* ---------- CONTENT ---------- */
+.info-content {
+  font-size: 13.5px;          
+}
+
+.info-content p {
+  margin: 4px 0;                
+}
+
+.info-content i {
+  margin-right: 6px;
+  color: #4CAF50;
+}
+
+.info-content p i {
+  font-size: 15px;
+}
+
+/* ---------------- LIST ORDERS BUTTON (OLD STYLE, IF USED) ---------------- */
+
+.list-orders-btn {
+  margin-top: 8px;             
+  width: 100%;
+  padding: 7px 10px;
+
+  background-color: #2563eb;
+  color: #ffffff;
+
+  border: none;
+  border-radius: 4px;
+
+  font-size: 13.5px;
+  font-weight: 500;
+  cursor: pointer;
+
+  transition: background-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.list-orders-btn:hover {
+  background-color: #1e40af;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+}
+
+.list-orders-btn:active {
+  background-color: #1e3a8a;
+}
+
+/* ---------- VEHICLE INFO CARD ---------- */
+.vehicle-card {
+  min-width: 200px;             
+  max-width: 220px;             
+  background: #ffffff;
+  border-radius: 8px;
+  padding: 10px 12px;           
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.18);
+  font-family: Arial, sans-serif;
+}
+
+/* ---------- TITLE (if used later) ---------- */
+.vehicle-title {
+  display: flex;
+  align-items: center;
+  font-size: 14px;
+  font-weight: 400;
+  margin-bottom: 6px;           
+  color: #111;
+}
+
+.vehicle-title .vehicle-icon {
+  margin-right: 6px;
+}
+
+/* ---------- ROWS ---------- */
+.vehicle-row {
+  display: flex;
+  align-items: center;
+  font-size: 13.5px;            
+  color: #333;
+  margin-bottom: 4px;           
+}
+
+/* ---------- ICON COLUMN ---------- */
+.row-icon {
+  width: 20px;               
+  margin-right: 6px;
+  text-align: center;
+  font-size: 18px;            
+}
+
+/* ---------- LIST ORDERS BUTTON ---------- */
+.vehicle-orders-btn {
+  margin-top: 8px;             
+  width: 100%;
+  padding: 7px;
+
+  background-color: #2563eb;
+  color: #ffffff;
+
+  border: none;
+  border-radius: 4px;
+
+  font-size: 13.5px;            
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.vehicle-orders-btn:hover {
+  background-color: #1e40af;
+}
+
+.gm-style-iw,
+.gm-style-iw-c,
+.gm-style-iw-d {
+  padding: 0 !important;
+  margin: 0 !important;
+  box-sizing: border-box;
+}
+
+
+.gm-style-iw-c {
+  max-height: none !important;
+}
+
+
+.gm-ui-hover-effect {
+  top: 6px !important;
+  right: 6px !important;
+}
+
+
+.gm-style-iw-d > div {
+  margin-top: 0 !important;
+}

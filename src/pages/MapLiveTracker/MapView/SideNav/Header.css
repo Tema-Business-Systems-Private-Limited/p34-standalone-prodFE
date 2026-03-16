@@ -1,0 +1,73 @@
+.map-header-form {
+  padding: 12px 16px;
+  background: #ffffff;
+  border-radius: 8px;
+}
+
+.header-label {
+  font-size: 13px;
+  font-weight: 500;
+  color: #6b7280;
+  margin-bottom: 6px;
+}
+
+/* react-select overrides */
+.map-select__control {
+  min-height: 38px;
+  border-radius: 6px;
+  border-color: #d1d5db;
+  box-shadow: none;
+}
+
+.map-select__control:hover {
+  border-color: #9ca3af;
+}
+
+.map-select__value-container {
+  padding: 0 10px;
+}
+
+.map-select__single-value {
+  font-size: 14px;
+}
+
+.map-select__placeholder {
+  font-size: 14px;
+  color: #9ca3af;
+}
+
+/* Refresh button */
+.map-refresh-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+
+  height: 36px;
+  padding: 0 14px;
+
+  border-radius: 6px;
+  border: 1px solid #d1d5db;
+  background-color: #f9fafb;
+
+  font-size: 14px;
+  font-weight: 500;
+  color: #111827;
+
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.map-refresh-btn svg {
+  stroke-width: 2;
+}
+
+.map-refresh-btn:hover {
+  background-color: #eef2ff;
+  border-color: #6366f1;
+  color: #4338ca;
+}
+
+.map-refresh-btn:active {
+  transform: scale(0.98);
+}
+

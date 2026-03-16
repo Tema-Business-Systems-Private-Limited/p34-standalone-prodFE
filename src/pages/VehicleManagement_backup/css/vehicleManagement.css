@@ -1,0 +1,64 @@
+.responsive-form {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 1rem; 
+  }
+  
+  .form-item {
+    display: flex;
+    flex-direction: column;
+    flex-basis: auto;
+    flex-grow: 1; 
+  }
+  
+  .text-input {
+    flex: 2; 
+    min-width: 200px;
+  }
+  
+  .dropdown-input {
+    flex: 1; 
+    min-width: 220px;
+  }
+  
+  .checkbox-input {
+    flex: 0.5; 
+    min-width: 50px;
+  }
+  
+  .button-input {
+    flex: 1; 
+    align-self: flex-end; 
+  }
+  
+
+
+
+
+  .custom-divider {
+    border: 0;
+    height: 1px;
+    background: #ccc;
+    margin: 20px 0;
+  }
+
+
+
+  /* three dots dropdown */
+
+  
+
+  
+  @media (max-width: 768px) {
+    .responsive-form {
+      flex-direction: column; 
+    }
+  
+    .form-item {
+      width: 100%; 
+    }
+  }
+  
+
+

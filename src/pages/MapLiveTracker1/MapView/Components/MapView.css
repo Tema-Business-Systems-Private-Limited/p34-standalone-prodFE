@@ -1,0 +1,40 @@
+.info-window {
+  font-family: Arial, sans-serif;
+  padding: 10px;
+  color: #333;
+}
+
+.info-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.info-header .icon {
+  font-size: 24px;
+  margin-right: 10px;
+  color: #4CAF50; /* Green color for the truck icon */
+}
+
+.info-header h3 {
+  margin: 0;
+  font-size: 18px;
+  color: #333;
+}
+
+.info-content {
+  font-size: 14px;
+}
+
+.info-content p {
+  margin: 5px 0;
+}
+
+.info-content i {
+  margin-right: 8px;
+  color: #4CAF50; /* Green color for icons */
+}
+
+.info-content p i {
+  font-size: 16px;
+}

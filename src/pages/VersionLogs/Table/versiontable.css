@@ -1,0 +1,16 @@
+.version-log-table {
+    border: 1px solid gray; /* Add a default border */
+}
+
+.version-log-table th,
+.version-log-table td {
+    border: 1px solid gray; /* Add borders to table cells */
+}
+
+.version-log-table thead th {
+    border-top: 2px solid gray; /* Add a thicker border to the top of header cells */
+}
+
+.version-log-table tbody tr:last-child td {
+    border-bottom: 2px solid gray; /* Add a thicker border to the bottom of the last row */
+}

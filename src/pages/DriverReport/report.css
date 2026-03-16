@@ -1,0 +1,19 @@
+
+.custom-schedule.e-schedule .e-vertical-view .e-work-cells {
+  height: 40px !important;
+}
+
+.custom-schedule.e-schedule .e-month-view .e-work-cells {
+  height: 40px !important;
+}
+
+.custom-schedule.e-schedule .e-agenda-view .e-appointment {
+  height: 40px !important;
+}
+
+
+.e-schedule .e-timeline-view .e-work-cells, .e-schedule .e-timeline-month-view .e-work-cells, .e-schedule .e-timeline-view .e-resource-cells, .e-schedule .e-timeline-month-view .e-resource-cells {
+ height : 60px !important;
+    width: 150px !important;
+}
+
