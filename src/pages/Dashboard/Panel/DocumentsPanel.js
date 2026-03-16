@@ -64,7 +64,6 @@ class DocumentsPanel extends React.Component {
 
 
   dayscheckBoxChange = () => {
-    // console.log("T222 docpanel - dayscheckbox change");
     this.setState({ Todayschecked: !this.props.daysCheckedIn });
     this.props.checked5days(!this.props.daysCheckedIn)
 
@@ -112,12 +111,9 @@ class DocumentsPanel extends React.Component {
 
   render() {
     const site = this.props.deliverySite;
-    // console.log("T21 inside doc panel");
     //const currDate = moment(this.props.selectedDate).format('YYYY-MM-DD');
 
     const currDate = moment(this.props.selectedDate).format('YYYY-MM-DD');
-    // console.log("T444 inside doc panel - propsdate", this.props.selectedDate);
-    // console.log("T444 inside doc panel - currdate", currDate);
     let filterDrops;
     let filterPickups;
     if (this.props.dropsPanel && (this.props.dropsPanel.drops || this.props.dropsPanel.pickUps)) {
@@ -160,54 +156,70 @@ class DocumentsPanel extends React.Component {
               return ((drop.dlvflg === '2' || drop.dlvflg === '1'));
             }
           }
+          return true;
 
+          // if (site === "") {
+          //   return ((drop.docnum.toLowerCase().indexOf(
+          //     this.props.searchDrp.toLowerCase()
+          //   ) !== -1) || (drop.bpcode.toLowerCase().indexOf(
+          //     this.props.searchDrp.toLowerCase()
+          //   ) !== -1) || (drop.bpname.toLowerCase().indexOf(
+          //     this.props.searchDrp.toLowerCase()
+          //   ) !== -1) || (drop.doctype.toLowerCase().indexOf(
+          //     this.props.searchDrp.toLowerCase()
+          //   ) !== -1) || (drop.prelistCode.toLowerCase().indexOf(
+          //     this.props.searchDrp.toLowerCase()
+          //   ) !== -1) || (drop.poscode.toLowerCase().indexOf(
+          //     this.props.searchDrp.toLowerCase()
+          //   ) !== -1) || (String(drop.netweight).indexOf(
+          //     this.props.searchDrp.toLowerCase()
+          //   ) !== -1) || (String(drop.volume).indexOf(
+          //     this.props.searchDrp.toLowerCase()
+          //   ) !== -1) || (drop.type.toLowerCase().indexOf(
+          //     this.props.searchDrp.toLowerCase()
+          //   ) !== -1));
 
-          if (site === "") {
-            return ((drop.docnum.toLowerCase().indexOf(
-              this.props.searchDrp.toLowerCase()
-            ) !== -1) || (drop.bpcode.toLowerCase().indexOf(
-              this.props.searchDrp.toLowerCase()
-            ) !== -1) || (drop.bpname.toLowerCase().indexOf(
-              this.props.searchDrp.toLowerCase()
-            ) !== -1) || (drop.doctype.toLowerCase().indexOf(
-              this.props.searchDrp.toLowerCase()
-            ) !== -1) || (drop.prelistCode.toLowerCase().indexOf(
-              this.props.searchDrp.toLowerCase()
-            ) !== -1) || (drop.poscode.toLowerCase().indexOf(
-              this.props.searchDrp.toLowerCase()
-            ) !== -1) || (String(drop.netweight).indexOf(
-              this.props.searchDrp.toLowerCase()
-            ) !== -1) || (String(drop.volume).indexOf(
-              this.props.searchDrp.toLowerCase()
-            ) !== -1) || (drop.type.toLowerCase().indexOf(
-              this.props.searchDrp.toLowerCase()
-            ) !== -1));
+          // }
+        //   else {
+        //     return (((drop.docnum.toLowerCase().indexOf(
+        //       this.props.searchDrp.toLowerCase()
+        //     ) !== -1) || (drop.bpcode.toLowerCase().indexOf(
+        //       this.props.searchDrp.toLowerCase()
+        //     ) !== -1) || (drop.bpname.toLowerCase().indexOf(
+        //       this.props.searchDrp.toLowerCase()
+        //     ) !== -1) || (drop.doctype.toLowerCase().indexOf(
+        //       this.props.searchDrp.toLowerCase()
+        //     ) !== -1) || (drop.prelistCode.toLowerCase().indexOf(
+        //       this.props.searchDrp.toLowerCase()
+        //     ) !== -1) || (drop.poscode.toLowerCase().indexOf(
+        //       this.props.searchDrp.toLowerCase()
+        //     ) !== -1) || (String(drop.netweight).indexOf(
+        //       this.props.searchDrp.toLowerCase()
+        //     ) !== -1) || (String(drop.volume).indexOf(
+        //       this.props.searchDrp.toLowerCase()
+        //     ) !== -1) || (drop.type.toLowerCase().indexOf(
+        //       this.props.searchDrp.toLowerCase()
+        //     ) !== -1)) && (drop.site === site));
 
-          }
-          else {
-            return (((drop.docnum.toLowerCase().indexOf(
-              this.props.searchDrp.toLowerCase()
-            ) !== -1) || (drop.bpcode.toLowerCase().indexOf(
-              this.props.searchDrp.toLowerCase()
-            ) !== -1) || (drop.bpname.toLowerCase().indexOf(
-              this.props.searchDrp.toLowerCase()
-            ) !== -1) || (drop.doctype.toLowerCase().indexOf(
-              this.props.searchDrp.toLowerCase()
-            ) !== -1) || (drop.prelistCode.toLowerCase().indexOf(
-              this.props.searchDrp.toLowerCase()
-            ) !== -1) || (drop.poscode.toLowerCase().indexOf(
-              this.props.searchDrp.toLowerCase()
-            ) !== -1) || (String(drop.netweight).indexOf(
-              this.props.searchDrp.toLowerCase()
-            ) !== -1) || (String(drop.volume).indexOf(
-              this.props.searchDrp.toLowerCase()
-            ) !== -1) || (drop.type.toLowerCase().indexOf(
-              this.props.searchDrp.toLowerCase()
-            ) !== -1)) && (drop.site === site));
-
-          }
+        //   }
         }
       );
+
+      if (this.props.searchDrp.trim() !== "") {
+        filterDrops = filterDrops.filter((drop) => {
+          return (
+            (drop.docnum.toLowerCase().indexOf(this.props.searchDrp.toLowerCase()) !== -1) ||
+            (drop.bpcode.toLowerCase().indexOf(this.props.searchDrp.toLowerCase()) !== -1) ||
+            (drop.bpname.toLowerCase().indexOf(this.props.searchDrp.toLowerCase()) !== -1) ||
+            (drop.doctype.toLowerCase().indexOf(this.props.searchDrp.toLowerCase()) !== -1) ||
+            (drop.prelistCode.toLowerCase().indexOf(this.props.searchDrp.toLowerCase()) !== -1) ||
+            (drop.poscode.toLowerCase().indexOf(this.props.searchDrp.toLowerCase()) !== -1) ||
+            (String(drop.netweight).indexOf(this.props.searchDrp.toLowerCase()) !== -1) ||
+            (String(drop.volume).indexOf(this.props.searchDrp.toLowerCase()) !== -1) ||
+            (drop.type.toLowerCase().indexOf(this.props.searchDrp.toLowerCase()) !== -1)
+          );
+        });
+      }
 
       if (this.props.selectedRouteCodeArr.length > 0) {
         let SelectedRouteCodes = this.props.selectedRouteCodeArr;
@@ -225,46 +237,66 @@ class DocumentsPanel extends React.Component {
 
             return ((pickup.type === 'open') && (pickup.dlvystatus === '0' || pickup.dlvystatus === '8'));
           }
-          if (site == '') {
-            return ((pickup.docnum.indexOf(
-              this.props.searchPck.toLowerCase()
-            ) !== -1) || (pickup.bpcode.toLowerCase().indexOf(
-              this.props.searchPck.toLowerCase()
-            ) !== -1) || (pickup.bpname.toLowerCase().indexOf(
-              this.props.searchPck.toLowerCase()
-            ) !== -1) || (pickup.doctype.toLowerCase().indexOf(
-              this.props.searchPck.toLowerCase()
-            ) !== -1) || (pickup.poscode.toLowerCase().indexOf(
-              this.props.searchPck.toLowerCase()
-            ) !== -1) || (String(pickup.netweight).indexOf(
-              this.props.searchPck.toLowerCase()
-            ) !== -1) || (String(pickup.volume).indexOf(
-              this.props.searchPck.toLowerCase()
-            ) !== -1) || (pickup.type.toLowerCase().indexOf(
-              this.props.searchPck.toLowerCase()
-            ) !== -1));
-          }
+          // ramana
           else {
-            return (((pickup.docnum.indexOf(
-              this.props.searchPck.toLowerCase()
-            ) !== -1) || (pickup.bpcode.toLowerCase().indexOf(
-              this.props.searchPck.toLowerCase()
-            ) !== -1) || (pickup.bpname.toLowerCase().indexOf(
-              this.props.searchPck.toLowerCase()
-            ) !== -1) || (pickup.doctype.toLowerCase().indexOf(
-              this.props.searchPck.toLowerCase()
-            ) !== -1) || (pickup.poscode.toLowerCase().indexOf(
-              this.props.searchPck.toLowerCase()
-            ) !== -1) || (String(pickup.netweight).indexOf(
-              this.props.searchPck.toLowerCase()
-            ) !== -1) || (String(pickup.volume).indexOf(
-              this.props.searchPck.toLowerCase()
-            ) !== -1) || (pickup.type.toLowerCase().indexOf(
-              this.props.searchPck.toLowerCase()
-            ) !== -1)) && (pickup.site === site));
+            return true;
           }
+          // if (site == '') {
+          //   return ((pickup.docnum.indexOf(
+          //     this.props.searchPck.toLowerCase()
+          //   ) !== -1) || (pickup.bpcode.toLowerCase().indexOf(
+          //     this.props.searchPck.toLowerCase()
+          //   ) !== -1) || (pickup.bpname.toLowerCase().indexOf(
+          //     this.props.searchPck.toLowerCase()
+          //   ) !== -1) || (pickup.doctype.toLowerCase().indexOf(
+          //     this.props.searchPck.toLowerCase()
+          //   ) !== -1) || (pickup.poscode.toLowerCase().indexOf(
+          //     this.props.searchPck.toLowerCase()
+          //   ) !== -1) || (String(pickup.netweight).indexOf(
+          //     this.props.searchPck.toLowerCase()
+          //   ) !== -1) || (String(pickup.volume).indexOf(
+          //     this.props.searchPck.toLowerCase()
+          //   ) !== -1) || (pickup.type.toLowerCase().indexOf(
+          //     this.props.searchPck.toLowerCase()
+          //   ) !== -1));
+          // }
+          // else {
+          //   return (((pickup.docnum.indexOf(
+          //     this.props.searchPck.toLowerCase()
+          //   ) !== -1) || (pickup.bpcode.toLowerCase().indexOf(
+          //     this.props.searchPck.toLowerCase()
+          //   ) !== -1) || (pickup.bpname.toLowerCase().indexOf(
+          //     this.props.searchPck.toLowerCase()
+          //   ) !== -1) || (pickup.doctype.toLowerCase().indexOf(
+          //     this.props.searchPck.toLowerCase()
+          //   ) !== -1) || (pickup.poscode.toLowerCase().indexOf(
+          //     this.props.searchPck.toLowerCase()
+          //   ) !== -1) || (String(pickup.netweight).indexOf(
+          //     this.props.searchPck.toLowerCase()
+          //   ) !== -1) || (String(pickup.volume).indexOf(
+          //     this.props.searchPck.toLowerCase()
+          //   ) !== -1) || (pickup.type.toLowerCase().indexOf(
+          //     this.props.searchPck.toLowerCase()
+          //   ) !== -1)) && (pickup.site === site));
+          // }
         }
       );
+
+      if (this.props.searchPck !== "") {
+        filterPickups = filterPickups.filter((pickup) => {
+          return (
+            (pickup.docnum.toLowerCase().indexOf(this.props.searchPck.toLowerCase()) !== -1) ||
+            (pickup.bpcode.toLowerCase().indexOf(this.props.searchPck.toLowerCase()) !== -1) ||
+            (pickup.bpname.toLowerCase().indexOf(this.props.searchPck.toLowerCase()) !== -1) ||
+            (pickup.doctype.toLowerCase().indexOf(this.props.searchPck.toLowerCase()) !== -1) ||
+            (pickup.poscode.toLowerCase().indexOf(this.props.searchPck.toLowerCase()) !== -1) ||
+            (String(pickup.netweight).indexOf(this.props.searchPck.toLowerCase()) !== -1) ||
+            (String(pickup.volume).indexOf(this.props.searchPck.toLowerCase()) !== -1) ||
+            (pickup.type.toLowerCase().indexOf(this.props.searchPck.toLowerCase()) !== -1)
+          );
+        });
+      }
+      
     }
 
 
@@ -288,19 +320,7 @@ class DocumentsPanel extends React.Component {
                     Deliveries
                   </NavLink>
                 </NavItem>
-                <NavItem>
-                  <NavLink
-                    style={{ cursor: "pointer" }}
-                    className={classnames({
-                      active: this.state.activeTab === "Pickups",
-                    })}
-                    onClick={() => {
-                      this.toggleTab("Pickups");
-                    }}
-                  >
-                    <span>{this.props.t('Pickups')}</span>
-                  </NavLink>
-                </NavItem>
+
               </Nav>
               <div className="d-flex align-items-center">
                 <div className="custom-control mb-0 mr-4">
@@ -324,43 +344,6 @@ class DocumentsPanel extends React.Component {
                   >
                     {this.props.t('Refresh')}
                   </button>
-                </div>
-                <div className="custom-control custom-checkbox mb-2 mr-3">
-                  <Input
-                    type="checkbox"
-                    className="custom-control-input"
-                    onChange={() => this.DeliverablecheckBoxChange()}
-                    checked={this.state.Todeliverablechecked}
-                  />
-                  <Label
-                    className="custom-control-label"
-                    onClick={() => {
-                      this.setState({
-                        Todeliverablechecked: !this.state.Todeliverablechecked,
-                      });
-                    }}
-                  >
-                    {/* {this.props.t('Deliverables')} */}
-                    Deliverable
-                  </Label>
-                </div>
-                <div className="custom-control custom-checkbox mb-2 mr-3">
-                  <Input
-                    type="checkbox"
-                    className="custom-control-input"
-                    onChange={() => this.InProcesscheckBoxChange()}
-                    checked={this.state.ToInprocesschecked}
-                  />
-                  <Label
-                    className="custom-control-label"
-                    onClick={() => {
-                      this.setState({
-                        ToInprocesschecked: !this.state.ToInprocesschecked,
-                      });
-                    }}
-                  >
-                    {this.props.t('Not Deliverable')}
-                  </Label>
                 </div>
                 <div className="custom-control custom-checkbox mb-2 mr-3">
                   <Input

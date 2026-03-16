@@ -30,7 +30,7 @@ class DisplayCheckedTrip extends React.Component {
                         <Button onClick={() => this.props.onHide()}>Ok</Button>
                         :
                         <>
-                            {/* <Button onClick={() => this.props.onUpdate('evnt', "createVehicle")}>{this.props.t('Create')}</Button> */}
+                            <Button onClick={() => this.props.onUpdate('evnt', "createVehicle")}>{this.props.t('Create')}</Button>
                             <Button onClick={() => this.props.onUpdate('evnt', "updateVehicle")}>{this.props.t('Replace')}</Button>
                         </>
                     }

@@ -33,7 +33,6 @@ import Select from "react-select";
 import makeAnimated from "react-select/animated";
 import AlertNewOver from "./AlertNew_over";
 import { ToastContainer, toast } from "react-toastify";
-import Switch from "@mui/material/Switch";
 
 const AutoOptimizationPopup = (props) => {
   //   const isOpen, setIsOpen] = useState(props.modalState);
@@ -49,12 +48,11 @@ const AutoOptimizationPopup = (props) => {
   const [excludeUsedVehicles, setExcludeUsedVehicles] = useState(false);
   const [filteredDrops, setFilteredDrops] = useState([]);
   const [filteredPickUps, setFilteredPickUps] = useState([]);
-  const [pinkCustomersOnly, setPinkCustomersOnly] = useState(false);
+const [pinkCustomersOnly, setPinkCustomersOnly] = useState(false);
   const [selectedDropDocuments, setSelectedDropDocuments] = useState([]);
   const [selectedPickupDocuments, setSelectedPickupDocuments] = useState([]);
   const [selectedDrivers, setSelectedDrivers] = useState([]);
   const [selectedItems, setSelectedItems] = useState([]);
-  const [selectedVehicles, setSelectedVehicles] = useState([]);
   const [propsDocumentList, setPropsDocumentList] = useState([]);
   const [dropsList, setDropsList] = useState([]);
   const [pickUpsList, setPickUpsList] = useState([]);
@@ -70,14 +68,7 @@ const AutoOptimizationPopup = (props) => {
   const [searchDTerm, setSearchDTerm] = useState("");
   const [startDateChange, setStartDateChange] = useState("");
   const [endDateChange, setEndDateChange] = useState("");
-  // Radio selections
-  const [loadType, setLoadType] = useState("ALL");
-  // PALLETS | ALL (Weight, Cases, Pallets)
 
-  const [autoType, setAutoType] = useState("AUTO");
-  // AUTO | AUTO_ROUTE
-  const [engineType, setEngineType] = useState("OSRM");
-  // AUTO | AUTO_ROUTE
 
   const usedVehicleCodes = useMemo(() => {
     // tripsList has "code"
@@ -400,10 +391,10 @@ const AutoOptimizationPopup = (props) => {
   };
 
 
-  useEffect(() => {
-    setFilteredDrops(applyDocumentFilters(dropsList));
-    setFilteredPickUps(applyDocumentFilters(pickUpsList));
-  }, [pinkCustomersOnly]);
+useEffect(() => {
+  setFilteredDrops(applyDocumentFilters(dropsList));
+  setFilteredPickUps(applyDocumentFilters(pickUpsList));
+}, [pinkCustomersOnly]);
 
   const CloseAutoGeneratePopUp = () => {
     props.openPopupAuto(false);
@@ -424,7 +415,6 @@ const AutoOptimizationPopup = (props) => {
     setPinkCustomersOnly(false);
     setSearchTerm("");
     setSearchDTerm("");
-    setExcludeUsedVehicles(false);
   };
 
   const generateRoutefromSelections = () => {
@@ -476,10 +466,7 @@ const AutoOptimizationPopup = (props) => {
     props.autofromselection_nextBilloins(
       allSelectedDocuments,
       selectedVehiclesToSend,
-      selectedDrivers,
-      loadType,
-      autoType,
-      engineType
+      selectedDrivers
     );
     props.openPopupAuto(false);
     setSelectedItems([]);
@@ -500,7 +487,7 @@ const AutoOptimizationPopup = (props) => {
   const handleSelect = (key) => {
     setActiveTab(key);
     setSearchTerm(""); // Update the active tab
-    // setFilteredVehicles(props.vehicles);
+    setFilteredVehicles(props.vehicles);
     setFilteredDrivers(props.drivers);
   };
 
@@ -694,25 +681,11 @@ const AutoOptimizationPopup = (props) => {
   };
 
 
-  // const handleSearchChange = (e) => {
-  //   const value = e.target.value;
-  //   setSearchTerm(value);
-  //   setFilteredVehicles(filterVehicles(props.vehicles, value));
-  // };
   const handleSearchChange = (e) => {
-  const value = e.target.value;
-  setSearchTerm(value);
-
-  if (activeTab === "Drivers") {
-    const filtered = props.drivers.filter((item) =>
-      Object.keys(item).some((key) =>
-        String(item[key]).toLowerCase().includes(value.toLowerCase())
-      )
-    );
-    setFilteredDrivers(filtered);
-  }
-  // Vehicles are handled automatically by the useEffect watching searchTerm
-};
+    const value = e.target.value;
+    setSearchTerm(value);
+    setFilteredVehicles(filterVehicles(props.vehicles, value));
+  };
 
 
   const handleSearchChange_backup_09102025 = (e) => {
@@ -942,8 +915,6 @@ const AutoOptimizationPopup = (props) => {
     }
   }, [startDateChange, endDateChange]);
 
-  console.log("checking engineType from toggle", engineType);
-
   return (
     <Dialog
       onClose={() => props.openPopupAuto(false)}
@@ -963,24 +934,10 @@ const AutoOptimizationPopup = (props) => {
       }}
     >
       <Card>
-        {/* <CardHeader style={{ backgroundColor: "#044C84", color: "white" }}>
+        <CardHeader style={{ backgroundColor: "#044C84", color: "white" }}>
           <CardTitle style={{ fontSize: "25px" }}>
             Auto Trip Generation : Please select Vehicles, Drivers and Documents
           </CardTitle>
-        </CardHeader> */}
-                <CardHeader className="d-flex justify-content-between align-items-center" style={{ backgroundColor: "#044C84", color: "white" }}>
-          <CardTitle style={{ fontSize: "25px" }}>
-            Auto Trip Generation : Please select Vehicles, Drivers and Documents
-          </CardTitle>
-          {/* <Switch
-                    checked={engineType === "NB"}
-                    onChange={(e) => setEngineType(e.target.checked ? "NB" : "OSRM")}
-            sx={{
-              "& .MuiSwitch-thumb": {
-                backgroundColor: "#1976d2",
-              }
-            }}
-          /> */}
         </CardHeader>
         <CardBody>
           <>
@@ -996,53 +953,38 @@ const AutoOptimizationPopup = (props) => {
                 </CardHeader> */}
               <CardBody>
                 {/* this is heding of table */}
-                <div style={{ display: "flex", justifyContent: 'space-between' }}>
-                  <div style={{ display: "flex", gap: "10px", justifyContent: 'flex-start' }}>
-                    <span
-                      className="badge bg-light text-dark"
-                      style={{
-                        fontSize: "14px",
-                        fontWeight: 600,
-                        padding: "8px 12px",
-                      }}
-                    >
-                      Vehicles : <span style={{ fontWeight: 700 }}> {fmtCases(selectedItems.length)}  </span>
-                    </span>
+                <div style={{ display: "flex", gap: "10px", justifyContent: 'flex-end' }}>
+                  <span
+                    className="badge bg-light text-dark"
+                    style={{
+                      fontSize: "14px",
+                      fontWeight: 600,
+                      padding: "8px 12px",
+                    }}
+                  >
+                    Orders : <span style={{ fontWeight: 700 }}> {fmtCases(documentTotals.count)}  </span>
+                  </span>
 
-                  </div>
-                  <div style={{ display: "flex", gap: "10px", justifyContent: 'flex-end' }}>
-                    <span
-                      className="badge bg-light text-dark"
-                      style={{
-                        fontSize: "14px",
-                        fontWeight: 600,
-                        padding: "8px 12px",
-                      }}
-                    >
-                      Orders : <span style={{ fontWeight: 700 }}> {fmtCases(documentTotals.count)}  </span>
-                    </span>
-
-                    <span
-                      className="badge bg-light text-dark"
-                      style={{
-                        fontSize: "14px",
-                        fontWeight: 600,
-                        padding: "8px 12px",
-                      }}
-                    >
-                      Pallets: <span style={{ fontWeight: 700 }}> {fmtPallets(documentTotals.pallets)} PAL </span>
-                    </span>
-                    <span
-                      className="badge bg-light text-dark"
-                      style={{
-                        fontSize: "14px",
-                        fontWeight: 600,
-                        padding: "8px 12px",
-                      }}
-                    >
-                      Cases: <span style={{ fontWeight: 700 }}> {fmtCases(documentTotals.cases)} CS </span>
-                    </span>
-                  </div>
+                  <span
+                    className="badge bg-light text-dark"
+                    style={{
+                      fontSize: "14px",
+                      fontWeight: 600,
+                      padding: "8px 12px",
+                    }}
+                  >
+                    Pallets: <span style={{ fontWeight: 700 }}> {fmtPallets(documentTotals.pallets)} PAL </span>
+                  </span>
+                  <span
+                    className="badge bg-light text-dark"
+                    style={{
+                      fontSize: "14px",
+                      fontWeight: 600,
+                      padding: "8px 12px",
+                    }}
+                  >
+                    Cases: <span style={{ fontWeight: 700 }}> {fmtCases(documentTotals.cases)} CS </span>
+                  </span>
                 </div>
                 <Row style={{ border: "1px solid #044C84" }}>
                   <Col
@@ -1804,28 +1746,28 @@ const AutoOptimizationPopup = (props) => {
                           </Tab>
                         </Tabs>
                       </div>
-                      <div style={{ position: "absolute", top: "5px", right: "10px", display: 'flex', gap: 10, alignItems: 'center' }}>
-                        <input
-                          type="text"
-                          className="mt-2 form-control"
-                          placeholder="Search..."
-                          value={searchDTerm}
-                          onChange={handleSearchDChange}
-                          style={{ width: "200px" }}
-                        />
+                    <div style={{ position: "absolute", top: "5px", right: "10px", display: 'flex', gap: 10, alignItems: 'center' }}>
+                                            <input
+                                              type="text"
+                                              className="mt-2 form-control"
+                                              placeholder="Search..."
+                                              value={searchDTerm}
+                                              onChange={handleSearchDChange}
+                                              style={{ width: "200px" }}
+                                            />
 
-                        {/* NEW: Pink-only checkbox */}
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                          <input
-                            id="pink-only"
-                            type="checkbox"
-                            checked={pinkCustomersOnly}
-                            onChange={(e) => setPinkCustomersOnly(e.target.checked)}
-                          />
-                          <label htmlFor="pink-only" style={{ fontSize: 16, fontWeight: 800 }}> Pink</label>
-                        </div>
+                                            {/* NEW: Pink-only checkbox */}
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                              <input
+                                                id="pink-only"
+                                                type="checkbox"
+                                                checked={pinkCustomersOnly}
+                                                onChange={(e) => setPinkCustomersOnly(e.target.checked)}
+                                              />
+                                              <label htmlFor="pink-only" style={{ fontSize: 16, fontWeight: 800 }}> Pink</label>
+                                            </div>
 
-                      </div>
+                                          </div>
                     </div>
                   </Col>
                 </Row>
@@ -1840,123 +1782,9 @@ const AutoOptimizationPopup = (props) => {
             >
               Submit
             </button> */}
-          {/* Radio Options Row */}
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "flex-start",
-              gap: "40px",
-              marginBottom: "15px",
-              marginLeft: "30px",
-              alignItems: "center",
-            }}
-          >
-            {/* Load Type */}
-            {/* <div>
-              <Typography
-                variant="subtitle2"
-                style={{ fontWeight: 700, color: "#044C84", marginBottom: 5 }}
-              >
-                Capacity Validation
-              </Typography>
-              <div style={{ display: "flex",flexDirection: "column", gap: "8px", marginLeft : "15px" }}>
-                <Label check>
-                  <Input
-                    type="radio"
-                    name="loadType"
-                    value="PALLETS"
-                    checked={loadType === "PALLETS"}
-                    onChange={() => setLoadType("PALLETS")}
-                  />{" "}
-                  Only Pallets
-                </Label>
-
-                <Label check>
-                  <Input
-                    type="radio"
-                    name="loadType"
-                    value="ALL"
-                    checked={loadType === "ALL"}
-                    onChange={() => setLoadType("ALL")}
-                  />{" "}
-                  Weight, Cases, Pallets
-                </Label>
-              </div>
-            </div> */}
-
-            {/* Auto Type */}
-            {/* <div>
-              <Typography
-                variant="subtitle2"
-                style={{ fontWeight: 700, color: "#044C84", marginBottom: 5 }}
-              >
-                Auto Optimisation Mode
-              </Typography>
-              <div style={{ display: "flex",flexDirection: "column", gap: "8px", marginLeft : "15px" }}>
-                <Label check>
-                  <Input
-                    type="radio"
-                    name="autoType"
-                    value="AUTO_ROUTE"
-                    checked={autoType === "AUTO_ROUTE"}
-                    onChange={() => setAutoType("AUTO_ROUTE")}
-                  />{" "}
-                  Auto with Group By City
-                </Label>
-
-                <Label check>
-                  <Input
-                    type="radio"
-                    name="autoType"
-                    value="AUTO"
-                    checked={autoType === "AUTO"}
-                    onChange={() => setAutoType("AUTO")}
-                  />{" "}
-                  Auto
-                </Label>
-              </div>
-            </div> */}
-
-            {/* Engine Type*/}
-
-            {/* <div>
-              <Typography
-                variant="subtitle2"
-                style={{ fontWeight: 700, color: "#044C84", marginBottom: 5 }}
-              >
-                Optimisation Engine
-              </Typography>
-              <div style={{ display: "flex", flexDirection: "column", gap: "8px", marginLeft: "15px" }}>
-                <Label check>
-                  <Input
-                    type="radio"
-                    name="engineType"
-                    value="NB"
-                    checked={engineType === "NB"}
-                    onChange={() => setEngineType("NB")}
-                  />{" "}
-                  NB
-                </Label>
-
-                <Label check>
-                  <Input
-                    type="radio"
-                    name="engineType"
-                    value="OSRM"
-                    checked={engineType === "OSRM"}
-                    onChange={() => setEngineType("OSRM")}
-                  />{" "}
-                  OSRM
-                </Label>
-              </div>
-            </div> */}
-          </div>
-
           <div
             style={{ display: "flex", justifyContent: "flex-end", gap: "20px" }}
           >
-
-
             {((selectedDropDocuments.length > 0 && selectedItems.length > 0) ||
               (selectedPickupDocuments.length > 0 &&
                 selectedItems.length > 0)) && (

@@ -60,7 +60,7 @@ function* loginUser({ payload: { user, history } }) {
                  history.push('/login');
                 }
             }
-            history.push('/usermgmt');
+            history.push('/dashboard');
         } catch (error) {
             window.alert("Request Timed Out - please contact team");
             // yield put(apiError(error));

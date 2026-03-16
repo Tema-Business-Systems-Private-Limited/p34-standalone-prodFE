@@ -133,13 +133,13 @@ class SidebarContent extends Component {
             overflowX: "hidden",
           }}>
           <ul className="metismenu list-unstyled" id="side-menu" style={{ width: "100%" }}>
-            {/* <li className={`${user.rpflag ? "d-block" : "d-none"}`}>
+            <li className={`${user.rpflag ? "d-block" : "d-none"}`}>
               <Link to="/dashboard" className="waves-effect">
                 <i className="ri-guide-line"></i>
                 <span className="badge badge-pill badge-success float-right"></span>
                 <span className="ml-1">{this.props.t("Route Planner")}</span>
               </Link>
-            </li> */}
+            </li>
 
             {/* <li className={`${user.schflag ? "d-block" : "d-none"}`}>
               <Link to="/scheduler2" className=" waves-effect">

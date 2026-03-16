@@ -24,9 +24,6 @@ class ProductsDetailList extends React.Component {
   }
 
   render() {
-
-    console.log("T3333 data inside prod list", this.props.Datalist)
-
     return (
       <Modal
         {...this.props}
@@ -49,22 +46,24 @@ class ProductsDetailList extends React.Component {
                   {" "}
                   {"Seq"}
                 </th>
-                <th width="6%"> {"Route"}</th>
-                <th width="6%"> {"Vehicle"}</th>
-                <th width="6%"> {"Transaction No"}</th>
-                <th width="auto"> {"ProductLists"}</th>
-                <th width="6%"> {"Type"}</th>
-                <th width="6%"> {"Client Code"}</th>
-                <th width="6%"> {"Client"}</th>
+                {/* <th width="6%"> {"Route"}</th>
+                <th width="6%"> {"Vehicle"}</th> */}
+                <th width="6%"> {"Transaction"}</th>
+                {/* <th width="6%"> {"Type"}</th> */}
+                {/* <th width="6%"> {"Customer"}</th> */}
+                <th width="6%"> {"Name"}</th>
+                <th width="6%"> {"Pallets"}</th>
+                <th width="6%"> {"Cases"}</th>
+                {/* <th width="6%"> {"Weight"}</th>
+                <th width="6%"> {"Volume"}</th> */}
                 <th width="6%"> {"City"}</th>
-                <th width="6%"> {"Capacity"}</th>
-                <th width="6%"> {"Volume"}</th>
+                <th width="auto"> {"Product"}</th>
+                <th width="auto"> {"Product Name"}</th>
+                <th width="auto"> {"Qty"}</th>
               </tr>
             </thead>
             <tbody>
-              {(this.props.Datalist || [])
-              .filter(data => data.doctype !== 'BREAK')
-              .map((data, i) => {
+              {(this.props.Datalist || []).map((data, i) => {
                 return (
                   <tr
                     key={data.docnum}
@@ -78,46 +77,55 @@ class ProductsDetailList extends React.Component {
                         {i + 1}
                       </span>
                     </td>
-                    <td width="6%" name="itemCod">
+                    {/* <td width="6%" name="itemCod">
                       {data.itemCode}
                     </td>
                     <td width="6%" name="itemCode">
                       {data.vehicleCode}
-                    </td>
+                    </td> */}
                     <td width="6%" name="docNum">
                       {data.docnum}
                     </td>
-
-                    <td>
-                      <tr>
-                        <th>Prod code</th>
-                        <th>Prod Name</th>
-                        <th>Qty</th>
-                      </tr>
+                    {/* <td width="6%">{data.bpcode}</td> */}
+                    <td width="6%">{data.bpname}</td>
+                    <td width="6%">{parseFloat(data.noofCases).toFixed(2)} PAL</td>
+                    <td width="6%">{data?.mainCases ? parseFloat(data.mainCases) : 0} CS</td>
+                    {/* <td width="6%">
+                      {data.netweight} {data.weightunit}
+                    </td>
+                    <td width="6%">
+                      {data.volume} {data.volume_unit}
+                    </td> */}
+                    <td width="6%">
+                      {/* {data.poscode} ,  */}
+                      {data.city}
+                    </td>
+                    <td width="auto" style={{ whiteSpace: "nowrap" }}>
                       {data.products.map((prd) => (
                         <tr>
                           <td>{prd.productCode}</td>
+                        </tr>
+                      ))}
+                    </td>
+                    <td width="auto" style={{ whiteSpace: "nowrap" }}>
+                      {data.products.map((prd) => (
+                        <tr>
                           <td>{prd.productName}</td>
+                        </tr>
+                      ))}
+                    </td>
+                    <td width="auto" style={{ whiteSpace: "nowrap" }}>
+                      {data.products.map((prd) => (
+                        <tr>
                           <td>
                             {prd.quantity} {prd.uom}
                           </td>
                         </tr>
                       ))}
                     </td>
-                    <td width="6%">
+                    {/* <td width="6%">
                       {data.doctype ? data.doctype : data.movtype}
-                    </td>
-                    <td width="6%">{data.bpcode}</td>
-                    <td width="6%">{data.bpname}</td>
-                    <td width="6%">
-                      {data.poscode} , {data.city}
-                    </td>
-                    <td width="6%">
-                      {data.netweight} {data.weightunit}
-                    </td>
-                    <td width="6%">
-                      {data.volume} {data.volume_unit}
-                    </td>
+                    </td> */}
                   </tr>
                 );
               })}

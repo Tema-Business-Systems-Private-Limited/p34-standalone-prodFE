@@ -86,7 +86,6 @@ class Vehicles3 extends React.Component {
   }
 
   SearchVehicle = e => {
-    console.log("search content= ", e.target.value);
     this.props.updateVehSearchTerm(e);
   }
 
@@ -129,10 +128,10 @@ class Vehicles3 extends React.Component {
             </Col>
           </Row>
 
-          <div class="reportlist-view" style={{ height: "250px", overflowY: "auto" }}>
+          <div class="reportlist-view" style={{ height: "350px", overflowY: "auto" }}>
             <table class="table m-0">
               <thead class="custom-sort">
-                <tr>
+                {/* <tr>
                   <th
                     style={{
                       position: "sticky",
@@ -141,7 +140,63 @@ class Vehicles3 extends React.Component {
                       backgroundColor: "#f8f9fa",
                     }}
                     onClick={() => this.props.sortVehicles('codeyve', 0)}>
-                    {this.props.t("Code vehicle")} {this.props.vehOrder[0] === 1 ? "▼" : "▲"}
+                    {this.props.t("Vehicle")} {this.props.vehOrder[0] === 1 ? "▼" : "▲"}
+                  </th>
+                  <th style={{
+                    position: "sticky",
+                    top: "1px",
+                    zIndex: 1,
+                    backgroundColor: "#f8f9fa",
+                  }} onClick={() => this.props.sortVehicles('catego', 1)}>
+                    {this.props.t("Class")}  {this.props.vehOrder[1] === 1 ? "▼" : "▲"}
+                  </th>
+                  <th style={{
+                    position: "sticky",
+                    top: "1px",
+                    zIndex: 1,
+                    backgroundColor: "#f8f9fa",
+                  }} onClick={() => this.props.sortVehicles('bptnum', 2)}>
+                    {this.props.t("Carrier")}   {this.props.vehOrder[2] === 1 ? "▼" : "▲"}
+                  </th>
+                  <th style={{
+                    position: "sticky",
+                    top: "1px",
+                    zIndex: 1,
+                    backgroundColor: "#f8f9fa",
+                  }} onClick={() => this.props.sortVehicles('maxqty', 3)}>
+                    {this.props.t("Pallets")}   {this.props.vehOrder[3] === 1 ? "▼" : "▲"}
+                  </th>
+                  <th style={{
+                    position: "sticky",
+                    top: "1px",
+                    zIndex: 1,
+                    backgroundColor: "#f8f9fa",
+                  }} onClick={() => this.props.sortVehicles('capacities', 4)}>
+                    {this.props.t("Weight")}  {this.props.vehOrder[4] === 1 ? "▼" : "▲"}
+                  </th>
+                  <th style={{
+                    position: "sticky",
+                    top: "1px",
+                    zIndex: 1,
+                    backgroundColor: "#f8f9fa",
+                  }} onClick={() => this.props.sortVehicles('vol', 5)}>
+                    {this.props.t("Volume")}    {this.props.vehOrder[5] === 1 ? "▼" : "▲"}
+                  </th>
+                  <th style={{
+                    position: "sticky",
+                    top: "1px",
+                    zIndex: 1,
+                    backgroundColor: "#f8f9fa",
+                  }} onClick={() => this.props.sortVehicles('maxordercnt', 6)}>
+                    {this.props.t("Max Stops")}   {this.props.vehOrder[6] === 1 ? "▼" : "▲"}
+                  </th>
+                  <th style={{
+                    position: "sticky",
+                    top: "1px",
+                    zIndex: 1,
+                    backgroundColor: "#f8f9fa",
+                  }} onClick={() => this.props.sortVehicles('drivername', 7)}>
+                    {this.props.t("Driver Name")} {this.props.vehOrder[7] === 1 ? "▼" : "▲"}
                   </th>
                   <th style={{
                     position: "sticky",
@@ -149,7 +204,7 @@ class Vehicles3 extends React.Component {
                     zIndex: 1,
                     backgroundColor: "#f8f9fa",
                   }} onClick={() => this.props.sortVehicles('name', 1)}>
-                    {this.props.t("Vehicle No")} {this.props.vehOrder[1] === 1 ? "▼" : "▲"}
+                    {this.props.t("License Plate")} {this.props.vehOrder[1] === 1 ? "▼" : "▲"}
                   </th>
                   <th style={{
                     position: "sticky",
@@ -172,14 +227,6 @@ class Vehicles3 extends React.Component {
                     top: "1px",
                     zIndex: 1,
                     backgroundColor: "#f8f9fa",
-                  }} onClick={() => this.props.sortVehicles('drivername', 4)}>
-                    {this.props.t("Driver Name")} {this.props.vehOrder[4] === 1 ? "▼" : "▲"}
-                  </th>
-                  <th style={{
-                    position: "sticky",
-                    top: "1px",
-                    zIndex: 1,
-                    backgroundColor: "#f8f9fa",
                   }} onClick={() => this.props.sortVehicles('lateral', 5)}>
                     Side Operation  {this.props.vehOrder[5] === 1 ? "▼" : "▲"}
                   </th>
@@ -190,15 +237,6 @@ class Vehicles3 extends React.Component {
                     backgroundColor: "#f8f9fa",
                   }} onClick={() => this.props.sortVehicles('trailer', 6)}>
                     {this.props.t("Trailer")} {this.props.vehOrder[6] === 1 ? "▼" : "▲"}
-                  </th>
-
-                  <th style={{
-                    position: "sticky",
-                    top: "1px",
-                    zIndex: 1,
-                    backgroundColor: "#f8f9fa",
-                  }} onClick={() => this.props.sortVehicles('catego', 7)}>
-                    {this.props.t("Category")}  {this.props.vehOrder[7] === 1 ? "▼" : "▲"}
                   </th>
                   <th style={{
                     position: "sticky",
@@ -216,38 +254,6 @@ class Vehicles3 extends React.Component {
                   }} onClick={() => this.props.sortVehicles('lateststarttime', 9)}>
                     {this.props.t("Latest<br/>Start Time")}   {this.props.vehOrder[9] === 1 ? "▼" : "▲"}
                   </th>
-                  <th style={{
-                    position: "sticky",
-                    top: "1px",
-                    zIndex: 1,
-                    backgroundColor: "#f8f9fa",
-                  }} onClick={() => this.props.sortVehicles('capacities', 10)}>
-                    {this.props.t("Capacity")}  {this.props.vehOrder[10] === 1 ? "▼" : "▲"}
-                  </th>
-                  <th style={{
-                    position: "sticky",
-                    top: "1px",
-                    zIndex: 1,
-                    backgroundColor: "#f8f9fa",
-                  }} onClick={() => this.props.sortVehicles('vol', 11)}>
-                    {this.props.t("Volume")}    {this.props.vehOrder[11] === 1 ? "▼" : "▲"}
-                  </th>
-                  <th style={{
-                    position: "sticky",
-                    top: "1px",
-                    zIndex: 1,
-                    backgroundColor: "#f8f9fa",
-                  }} onClick={() => this.props.sortVehicles('maxordercnt', 12)}>
-                    {this.props.t("Max Order<br/>Count")}   {this.props.vehOrder[12] === 1 ? "▼" : "▲"}
-                  </th>
-                   <th style={{
-                                      position: "sticky",
-                                      top: "1px",
-                                      zIndex: 1,
-                                      backgroundColor: "#f8f9fa",
-                                    }} onClick={() => this.props.sortVehicles('maxqty', 17)}>
-                                      {this.props.t("Max Quantity")}   {this.props.vehOrder[17] === 1 ? "▼" : "▲"}
-                                    </th>
                   <th style={{
                     position: "sticky",
                     top: "1px",
@@ -272,14 +278,80 @@ class Vehicles3 extends React.Component {
                   }} onClick={() => this.props.sortVehicles('maxtotaltrvtime', 15)}>
                     {this.props.t("Max Total<br/>Travel Time")}   {this.props.vehOrder[15] === 1 ? "▼" : "▲"}
                   </th>
-                  <th style={{
-                    position: "sticky",
-                    top: "1px",
-                    zIndex: 1,
-                    backgroundColor: "#f8f9fa",
-                  }} onClick={() => this.props.sortVehicles('bptnum', 16)}>
-                    {this.props.t("Carrier")}   {this.props.vehOrder[16] === 1 ? "▼" : "▲"}
+                </tr> */}
+                <tr>
+                  <th
+                    style={{ position: "sticky", top: "1px", zIndex: 1, backgroundColor: "#f8f9fa" }}
+                    onClick={() => this.props.sortVehicles('codeyve', 0)}>
+                    {this.props.t("Vehicle")}
+                    <span style={{ marginLeft: '4px', color: this.props.vehOrder[0] === -1 ? 'gray' : 'black' }}>
+                      {this.props.vehOrder[0] === 1 ? '▼' : '▲'}
+                    </span>
                   </th>
+
+                  <th
+                    style={{ position: "sticky", top: "1px", zIndex: 1, backgroundColor: "#f8f9fa" }}
+                    onClick={() => this.props.sortVehicles('bptnum', 1)}>
+                    {this.props.t("Class")}
+                    <span style={{ marginLeft: '4px', color: this.props.vehOrder[1] === -1 ? 'gray' : 'black' }}>
+                      {this.props.vehOrder[1] === 1 ? '▼' : '▲'}
+                    </span>
+                  </th>
+
+                  <th
+                    style={{ position: "sticky", top: "1px", zIndex: 1, backgroundColor: "#f8f9fa" }}
+                    onClick={() => this.props.sortVehicles('catego', 2)}>
+                    {this.props.t("Carrier")}
+                    <span style={{ marginLeft: '4px', color: this.props.vehOrder[2] === -1 ? 'gray' : 'black' }}>
+                      {this.props.vehOrder[2] === 1 ? '▼' : '▲'}
+                    </span>
+                  </th>
+
+                  <th
+                    style={{ position: "sticky", top: "1px", zIndex: 1, backgroundColor: "#f8f9fa" }}
+                    onClick={() => this.props.sortVehicles('maxqty', 3)}>
+                    {this.props.t("Pallets")}
+                    <span style={{ marginLeft: '4px', color: this.props.vehOrder[3] === -1 ? 'gray' : 'black' }}>
+                      {this.props.vehOrder[3] === 1 ? '▼' : '▲'}
+                    </span>
+                  </th>
+
+                  <th
+                    style={{ position: "sticky", top: "1px", zIndex: 1, backgroundColor: "#f8f9fa" }}
+                    onClick={() => this.props.sortVehicles('capacities', 4)}>
+                    {this.props.t("Weight")}
+                    <span style={{ marginLeft: '4px', color: this.props.vehOrder[4] === -1 ? 'gray' : 'black' }}>
+                      {this.props.vehOrder[4] === 1 ? '▼' : '▲'}
+                    </span>
+                  </th>
+
+                  <th
+                    style={{ position: "sticky", top: "1px", zIndex: 1, backgroundColor: "#f8f9fa" }}
+                    onClick={() => this.props.sortVehicles('vol', 5)}>
+                    {this.props.t("Volume")}
+                    <span style={{ marginLeft: '4px', color: this.props.vehOrder[5] === -1 ? 'gray' : 'black' }}>
+                      {this.props.vehOrder[5] === 1 ? '▼' : '▲'}
+                    </span>
+                  </th>
+
+                  <th
+                    style={{ position: "sticky", top: "1px", zIndex: 1, backgroundColor: "#f8f9fa" }}
+                    onClick={() => this.props.sortVehicles('maxordercnt', 6)}>
+                    {this.props.t("Max Stops")}
+                    <span style={{ marginLeft: '4px', color: this.props.vehOrder[6] === -1 ? 'gray' : 'black' }}>
+                      {this.props.vehOrder[6] === 1 ? '▼' : '▲'}
+                    </span>
+                  </th>
+
+                  <th
+                    style={{ position: "sticky", top: "1px", zIndex: 1, backgroundColor: "#f8f9fa" }}
+                    onClick={() => this.props.sortVehicles('drivername', 7)}>
+                    {this.props.t("Driver Name")}
+                    <span style={{ marginLeft: '4px', color: this.props.vehOrder[7] === -1 ? 'gray' : 'black' }}>
+                      {this.props.vehOrder[7] === 1 ? '▼' : '▲'}
+                    </span>
+                  </th>
+
                 </tr>
               </thead>
               <tbody>
@@ -295,25 +367,31 @@ class Vehicles3 extends React.Component {
                     style={{ backgroundColor: this.getColor(vehicle.color) }}
                   >
                     <td>{vehicle.codeyve}</td>
-                    <td>{vehicle.name}</td>
-                    <td>{vehicle.startdepotn}</td>
-                    <td>{vehicle.enddepotname}</td>
-                    <td>{vehicle.drivername}</td>
-                    <td>{vehicle.lateral}</td>
-                    <td>{vehicle.trailer}</td>
-
+                    <td>{vehicle.bptnum}</td>
                     <td>{vehicle.catego}</td>
-                    <td>{splitTime(vehicle.starttime)}</td>
-                    <td>{splitTime(vehicle.lateststarttime)}</td>
+                    <td>{vehicle.maxqty} PAL</td>
                     <td>{vehicle.capacities} {vehicle.xweu}</td>
                     <td>{vehicle.vol} {vehicle.xvol}</td>
                     <td>{vehicle.maxordercnt}</td>
-                    <td>{vehicle.maxqty}</td>
+                    <td>{vehicle.drivername}</td>
+                    {/* <td>{vehicle.name}</td>
+                    <td>{vehicle.startdepotn}</td>
+                    <td>{vehicle.enddepotname}</td> */}
 
-                    <td>{vehicle.maxtotaldist} {distunts}</td>
+
+                    {/* <td>{vehicle.lateral}</td> */}
+                    {/* <td>{vehicle.trailer}</td> */}
+
+
+                    {/* <td>{splitTime(vehicle.starttime)}</td>
+                    <td>{splitTime(vehicle.lateststarttime)}</td> */}
+
+
+
+                    {/* <td>{vehicle.maxtotaldist} {distunts}</td>
                     <td>{formatTime(convertHrToSec(vehicle.maxtotaltime))} Hrs</td>
-                    <td>{formatTime(convertHrToSec(vehicle.maxtotaltrvtime))} Hrs</td>
-                    <td>{vehicle.bptnum}</td>
+                    <td>{formatTime(convertHrToSec(vehicle.maxtotaltrvtime))} Hrs</td> */}
+
                   </tr>
                 ))}
               </tbody>

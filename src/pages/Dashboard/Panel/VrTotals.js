@@ -3,6 +3,7 @@ import { withNamespaces } from "react-i18next";
 import {
   nullAndNanChecking,
   nullAndNanCheckingFloat,
+  convertHrToSec, formatTime,
   nullAndTime,
 } from "../converterFunctions/converterFunctions";
 import {
@@ -35,12 +36,10 @@ class VrTotals extends React.Component {
   }
 
   toggleTab(tab) {
-    console.log("Clicked tab:", tab); // Check if the correct tab is clicked
     if (this.state.activeTab !== tab) {
       this.setState({
         activeTab: tab,
       });
-      console.log("Active tab:", this.state.activeTab); // Check if the activeTab state is updated correctly
     }
   }
 
@@ -49,8 +48,6 @@ class VrTotals extends React.Component {
     let c, d, m, v;
     var wu, vu;
     var lang = localStorage.getItem("lng");
-    // console.log(this.props.t("TotDistance"),"total distance");
-    // console.log("actual distance testing",this.props.t("ActualDistance"))
     /*   if (lang == "en") {
             currency = "USD";
             distunts = 'Miles';
@@ -73,9 +70,8 @@ class VrTotals extends React.Component {
     var VrObject = this.props.vrdata;
     var DetailObject = this.props.vedetail;
     var trip = this.props.tripdetails;
-    var VehicleCapacity = parseFloat(VrObject.capacities);
-    console.log("asdfgyewghdencsd", VehicleCapacity)
-    var VehicleVolume = parseFloat(VrObject.volume);
+    var VehicleCapacity = trip.lock ?  parseFloat(VrObject.capacities) : trip.capacities;
+    var VehicleVolume = trip.lock ? parseFloat(VrObject?.volume) : parseFloat(trip?.vehicleObject?.vol);
     var avai_weight = 0,
       avai_vol = 0,
       weight_per = 0,
@@ -93,23 +89,32 @@ class VrTotals extends React.Component {
       });
 
     if (trip.lock) {
-      for (i = 0; i < DetailObject.length; i++) {
-        var dropwei = 0.0,
-          pickupwei = 0.0,
-          dropvol = 0.0,
-          pickupvol = 0.0;
-        if (DetailObject[i].xdoctyp == 2) {
-          pickupwei = parseFloat(DetailObject[i].growei !== null ? DetailObject[i].growei : 0);
-          pickupvol = parseFloat(DetailObject[i].vol !== null ? DetailObject[i].vol : 0);
-        } else {
-          dropwei = parseFloat(DetailObject[i].growei !== null ? DetailObject[i].growei : 0);
-          dropvol = parseFloat(DetailObject[i].vol !== null ? DetailObject[i].vol : 0);
-        }
-        tdropwei = tdropwei + dropwei;
-        tpickupwei = tpickupwei + pickupwei;
-        tdropvol = tdropvol + dropvol;
-        tpickupvol = tpickupvol + pickupvol;
-      }
+      // for (i = 0; i < DetailObject.length; i++) {
+      //   var dropwei = 0.0,
+      //     pickupwei = 0.0,
+      //     dropvol = 0.0,
+      //     pickupvol = 0.0;
+      //   if (DetailObject[i].xdoctyp == 2) {
+      //     pickupwei = parseFloat(DetailObject[i].growei !== null ? DetailObject[i].growei : 0);
+      //     pickupvol = parseFloat(DetailObject[i].vol !== null ? DetailObject[i].vol : 0);
+      //   } else {
+      //     dropwei = parseFloat(DetailObject[i].growei !== null ? DetailObject[i].growei : 0);
+      //     dropvol = parseFloat(DetailObject[i].vol !== null ? DetailObject[i].vol : 0);
+      //   }
+      //   tdropwei = tdropwei + dropwei;
+      //   tpickupwei = tpickupwei + pickupwei;
+      //   tdropvol = tdropvol + dropvol;
+      //   tpickupvol = tpickupvol + pickupvol;
+      // }
+
+       var tdropwei = 0.0,
+      tpickupwei = 0.0,
+      tdropvol = 0.0
+      tpickupvol = 0.0;
+
+      tdropwei = parseFloat(trip.doc_capacity).toFixed(2);
+      tdropvol = parseFloat(trip.doc_volume).toFixed(2);
+      i = trip.stops;
     } else {
       var selectedDocs = "";
 
@@ -120,7 +125,6 @@ class VrTotals extends React.Component {
       ) {
         selectedDocs = trip.totalObject.selectedTripData;
       }
-      //   console.log("T5555 weight & vol ", selectedDocs);
       for (i = 0; i < selectedDocs.length; i++) {
         var dropwei = 0.0,
           pickupwei = 0.0,
@@ -137,15 +141,13 @@ class VrTotals extends React.Component {
         tpickupwei = tpickupwei + pickupwei;
         tdropvol = tdropvol + dropvol;
         tpickupvol = tpickupvol + pickupvol;
-
-        console.log("data 1 = ", selectedDocs[i]);
-        console.log("data 2 = ", dropvol);
       }
     }
-    console.log("asdfgyewghdencsd", tdropwei)
 
-    avai_vol = VehicleVolume - tdropvol;
-    avai_weight = VehicleCapacity - tdropwei;
+   // avai_vol = VehicleVolume - tdropvol;
+   // avai_weight = VehicleCapacity - tdropwei;
+     avai_vol = Math.max(VehicleVolume - tdropvol, 0);
+     avai_weight = Math.max(VehicleCapacity - tdropwei, 0);
     ordercount = i;
     weight_per = parseFloat((tdropwei / VehicleCapacity) * 100);
     weight_per = weight_per.toFixed(2);
@@ -164,7 +166,7 @@ class VrTotals extends React.Component {
       ? nullAndNanChecking(parseFloat(VehicleCapacity).toFixed(2), "vrStops")
       : parseFloat(trip.capacities).toFixed(2);
 
-    let veicleVolume = trip.lock ? VehicleVolume : 0;
+    let veicleVolume = trip.lock ? VehicleVolume : VehicleVolume;
 
     let loadingMass =nullAndNanChecking(weight_per, "vrStops");
 
@@ -176,37 +178,41 @@ class VrTotals extends React.Component {
 
     let pickupVolume = parseFloat(nullAndNanChecking(tpickupvol, "vrStops")).toFixed(2);
 
-    let vehicleAvailableWeight = trip.lock ? avai_weight : 0;
+    let vehicleAvailableWeight = trip.lock ? avai_weight.toFixed(2) : 0;
 
-    let vehicleAvailableVolume = trip.lock ? avai_vol : 0;
+    let vehicleAvailableVolume = trip.lock ? avai_vol.toFixed(2) : 0;
 
     let totalDistance = trip.lock
-      ? Math.round(this.props.vrdata.totdistance)
-      : Math.round(nullAndNanChecking(trip.totalDistance));
+      ? parseFloat(this.props.vrdata.totdistance).toFixed(2)
+       : Math.round(trip.totalDistance)
+    //  : parseFloat(nullAndNanChecking(trip.totalDistance)).toFixed(2);;
+
+
+    //  Math.round(trip.totalDistance)
 
     let totalTime = trip.lock
-      ? nullAndTime(this.props.vrdata.tottime)
-      : nullAndTime(trip.totalTime);
+      ? formatTime(convertHrToSec((this.props.vrdata.tottime)))
+      : formatTime(convertHrToSec(trip.totalTime));
 
     let travelTimeCost = trip.lock
-      ? trip.regularCost === "null" ? 0 : Math.round(Number(nullAndNanChecking(trip.regularCost, 'distance')))
-      : Math.round(Number(nullAndNanChecking(trip.regularCost, 'distance')));
+      ? parseFloat(trip.regularCost).toFixed(2)
+      : trip.regularCost !== "null" ? nullAndNanChecking(parseFloat(trip.regularCost).toFixed(2)) : 0;
 
     let travelTime = trip.lock
-      ?  trip.travelTime
-      : nullAndNanChecking(trip.travelTime);
+      ? trip.travelTime
+      : trip.travelTime !== "null" ? nullAndNanChecking(trip.travelTime) : 0;
 
     let overTimeCost = trip.lock
-      ? trip.overtimeCost === "null" ? 0 : parseFloat(trip.overtimeCost).toFixed(2)
-      : nullAndNanChecking(parseFloat(trip.regularCost).toFixed(2));
+      ? parseFloat(trip.overtimeCost).toFixed(2)
+      : trip.overtimeCost !== "null" ? parseFloat(nullAndNanChecking(trip.overtimeCost)).toFixed(2) : 0;
 
     let distanceCost = trip.lock
-      ? trip.distanceCost === "null" ? 0 : Math.round(Number(nullAndNanChecking(trip.distanceCost, 'distance')))
-      : Math.round(Number(nullAndNanChecking(trip.distanceCost, 'distance')));
+      ? parseFloat(trip.distanceCost).toFixed(2)
+      : trip.distanceCost !== "null" ? parseFloat(nullAndNanChecking(trip.distanceCost)).toFixed(2) : 0;
 
     let totalCost = trip.lock
-      ? trip.totalCost === "null" ? 0 : Math.round(Number(nullAndNanChecking(trip.totalCost, 'distance')))
-      : Math.round(Number(nullAndNanChecking(trip.totalCost, 'distance')));
+      ? parseFloat(trip.totalCost).toFixed(2)
+      : trip.totalCost !== "null" ? parseFloat(nullAndNanChecking(trip.totalCost)).toFixed(2) : 0;
     return (
       <Card>
         <CardBody>
@@ -801,7 +807,7 @@ class VrTotals extends React.Component {
                           <Col sm="8">
                             <Input
                               // value={"3.16 Hours"}
-                              value={totalTime + " " + "HH:MM"}
+   value={totalTime}
                               // value={props.data.Class}
                               style={{ fontWeight: "bold" }}
                               disabled
@@ -839,7 +845,8 @@ class VrTotals extends React.Component {
                             <Input
                               // value={props.data.DepartureSite}
                               // value={1.0}
-                              value={ travelTime + "  "+"HH:MM"}
+                              value={travelTime + " " }
+
                               style={{ fontWeight: "bold" }}
                               disabled
                             />
@@ -867,7 +874,8 @@ class VrTotals extends React.Component {
                               // value={props.data.ArrivalSite}
 
                               // value={3}
-                              value={Math.round(ordercount)}
+                              // value={Math.round(ordercount)}
+                              value={trip?.totalObject?.selectedTripData?.length}
                               style={{ fontWeight: "bold" }}
                               disabled
                             />

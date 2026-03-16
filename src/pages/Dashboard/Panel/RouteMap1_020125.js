@@ -39,7 +39,7 @@ import {
     Form,
 } from "reactstrap";
 
-const x3Url = process.env.REACT_APP_X3_URL;
+const x3Url = process.env.REACT_APP_X3_URL_EXTERNAL;
 
 function renumber_table(tableID) {
     $(tableID + " tr").each(function () {
@@ -155,8 +155,8 @@ class RouteMap extends React.Component {
     }
 
     buildContent = (place) => {
-        // const url = "${process.env.REACT_APP_X3_URL}/$sessions?f=GESSDH/2/M/" + place.docnum;
-        const url = `${process.env.REACT_APP_X3_URL}/$sessions?f=GESSDH/2//M/` + place.docnum;
+        // const url = "${process.env.REACT_APP_X3_URL_EXTERNAL}/$sessions?f=GESSDH/2/M/" + place.docnum;
+        const url = `${process.env.REACT_APP_X3_URL_EXTERNAL}/$sessions?f=GESSDH/2//M/` + place.docnum;
         return (
             <div id="content">
                 <div id="siteNotice"></div>
@@ -580,27 +580,27 @@ console.log("Marker index 1 ", place);
                 var url = "";
                 var content;
                 if (place.doctype == 'PRECEIPT') {
-                    url = `${process.env.REACT_APP_X3_URL}/$sessions?f=GESXX10CPTH/2//M/` + place.docnum;
+                    url = `${process.env.REACT_APP_X3_URL_EXTERNAL}/$sessions?f=GESXX10CPTH/2//M/` + place.docnum;
                     content = "<div id='content'><div id='siteNotice' style='position: absolute; padding-left: -5px'> " + seq + " </div><div id = 'bodyContent'><a href=" + url + " target='_blank'>" + place.docnum + "</a></br>" + place.bpname + "</br>" + place.poscode + " - " + place.city + "</div></div>";
 
                 }
                 else if (place.doctype == 'DLV') {
-                    url = `${process.env.REACT_APP_X3_URL}/$sessions?f=GESSDH/2//M/` + place.docnum;
+                    url = `${process.env.REACT_APP_X3_URL_EXTERNAL}/$sessions?f=GESSDH/2//M/` + place.docnum;
                     content = "<div id='content' style='position: relative'><div id='siteNotice' style='position: absolute; padding-left: -5px'> " + seq + " </div><div id = 'bodyContent'><a href=" + url + " target='_blank'>" + place.docnum + "</a></br>" + place.bpname + "</br>" + place.poscode + " - " + place.city + "</div></div>";
 
                 }
                 else if (place.doctype == 'PICK') {
-                    url = `${process.env.REACT_APP_X3_URL}/$sessions?f=GESPRH2/2//M/` + place.docnum;
+                    url = `${process.env.REACT_APP_X3_URL_EXTERNAL}/$sessions?f=GESPRH2/2//M/` + place.docnum;
                     content = "<div id='content' style='position: relative'><div id='siteNotice' style='position: absolute; padding-left: -5px'> #" + seq + " </div><div id = 'bodyContent' style='padding-left : 20px'><a href=" + url + " target='_blank'>" + place.docnum + "</a></br>" + docStatusBadge + "</br>" + place.bpname + "</br>" + place.poscode + " - " + place.city + "</br>" + deliveryno + "</div></div>";
 
                 }
                 else if (place.doctype == 'RETURN') {
-                    url = `${process.env.REACT_APP_X3_URL}/$sessions?f=GESSRH/2//M/` + place.docnum;
+                    url = `${process.env.REACT_APP_X3_URL_EXTERNAL}/$sessions?f=GESSRH/2//M/` + place.docnum;
                     content = "<div id='content' style='position: relative'><div id='siteNotice' style='position: absolute; padding-left: -5px'> " + seq + " </div><div id = 'bodyContent'><a href=" + url + " target='_blank'>" + place.docnum + "</a></br>" + docStatusBadge + "</br>" + place.bpname + "</br>" + place.poscode + " - " + place.city + "</div></div>";
 
                 }
                 else {
-                    url = `${process.env.REACT_APP_X3_URL}/$sessions?f=GESFCY/2//M/` + place.docnum;
+                    url = `${process.env.REACT_APP_X3_URL_EXTERNAL}/$sessions?f=GESFCY/2//M/` + place.docnum;
                     content = "<div id='content'><div id='siteNotice'></div><div id = 'bodyContent'><a href=" + url + " target='_blank'>" + SiteCode + "," + place.docnum + "</a></br>" + place.city + "</div></div>";
 
                 }

@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from "react";
-import { useParams, useHistory } from "react-router-dom";
 import {
   Row,
   Col,
@@ -13,17 +12,14 @@ import {
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
-export default function CreateEditRole() {
-  const { roleId } = useParams(); // if present → edit mode
-  const history = useHistory();
-
+export default function CreateEditRole({ match, history }) {
+  const roleId = match && match.params ? match.params.roleId : undefined;
   const isEdit = Boolean(roleId);
 
   const [role, setRole] = useState("");
   const [description, setDescription] = useState("");
   const [isActive, setIsActive] = useState(true);
 
-  // ✅ restored full modules list
   const [modules, setModules] = useState([
     { id: 1, name: "Dashboard", checked: false },
     { id: 2, name: "Users", checked: false },
@@ -43,10 +39,8 @@ export default function CreateEditRole() {
 
   const [errors, setErrors] = useState({});
 
-  // Prefill for edit
   useEffect(() => {
     if (isEdit) {
-      // In real app fetch by id
       const existingRole = {
         role: "Admin",
         description: "Has access to everything",
@@ -66,16 +60,14 @@ export default function CreateEditRole() {
     }
   }, [isEdit, roleId]);
 
-  // Validation
   const validate = () => {
-    let errs = {};
+    const errs = {};
     if (!role.trim()) errs.role = "Role is required";
     if (!description.trim()) errs.description = "Description is required";
     setErrors(errs);
     return Object.keys(errs).length === 0;
   };
 
-  // Submit handler
   const handleSubmit = () => {
     if (!validate()) return;
 
@@ -105,7 +97,6 @@ export default function CreateEditRole() {
           <Col xs="12">
             <Card className="shadow-lg rounded-2xl">
               <CardBody>
-                {/* Header */}
                 <Row className="mb-4">
                   <Col md="8" className="d-flex align-items-center">
                     <h2 className="h1 mb-0 text-black text-3xl font-bold">
@@ -116,7 +107,6 @@ export default function CreateEditRole() {
                     md="4"
                     className="d-flex justify-content-end align-items-center space-x-2"
                   >
-                    {/* ✅ Save/Create first, Cancel second */}
                     <Button
                       color="success"
                       className="rounded-xl shadow-md mr-2"
@@ -134,7 +124,6 @@ export default function CreateEditRole() {
                   </Col>
                 </Row>
 
-                {/* Form */}
                 <Row>
                   <Col md="2">
                     <FormGroup>
@@ -194,7 +183,6 @@ export default function CreateEditRole() {
                   </Col>
                 </Row>
 
-                {/* Modules */}
                 <Row className="mt-4">
                   <Col>
                     <h5 className="font-bold mb-3">Modules</h5>

@@ -1,9 +1,11 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Modal, Button } from 'react-bootstrap';
 import { HiInformationCircle, HiExclamation, HiCheck, HiX } from 'react-icons/hi';
 import 'bootstrap/dist/css/bootstrap.min.css';
 
-const ConfirmToAdd = ({ show,  message, onClose, onConfirm, msgtype, trip , document }) => {
+const ConfirmToAdd = ({ show, message, onClose, onConfirm, msgtype, trip, document }) => {
+  const [disabled, setDisabled] = useState(false);
+
   const styles = {
     info: { bg: "#D9EDF7", icon: <HiInformationCircle className="h-5 w-5 text-white" /> },
     warning: { bg: "#FCF8E3", icon: <HiExclamation className="h-5 w-5 text-white" /> },
@@ -36,14 +38,21 @@ const ConfirmToAdd = ({ show,  message, onClose, onConfirm, msgtype, trip , docu
     >
       <Modal.Header style={{ backgroundColor: bg, color: 'white', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <Modal.Title id="contained-modal-title-vcenter" style={{ flex: 1 }}>
-          <div style={{ color: 'black', textAlign: 'left', fontSize: "24px" }}>{message}</div>
+          <div style={{ color: 'black', textAlign: 'left', fontSize: "20px" }}>{message}</div>
         </Modal.Title>
       </Modal.Header>
       <Modal.Footer style={{ display: 'flex', justifyContent: 'center', padding: '20px' }}>
         {type === 'success' && (
           <Button
             variant="success"
-            onClick={() => onConfirm(msgtype)}
+            // onClick={() => onConfirm(msgtype)}
+            onClick={() => {
+              if (disabled) return;
+              setDisabled(true);
+              onConfirm(msgtype);
+              setTimeout(() => setDisabled(false), 2000);
+            }}
+            disabled={disabled}
             style={buttonStyle}
             className="d-flex align-items-center justify-content-center"
           >

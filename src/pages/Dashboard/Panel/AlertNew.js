@@ -39,7 +39,7 @@ const AlertNew = ({ show, type, message, onClose, onConfirm, msgtype }) => {
           <div style={{ color: 'black', textAlign: 'left', fontSize: "24px" }}>{message}</div>
         </Modal.Title>
       </Modal.Header>
-      <Modal.Footer className='bg-light' style={{ display: 'flex', justifyContent: 'center', padding: '20px' }}>
+      <Modal.Footer style={{ display: 'flex', justifyContent: 'center', padding: '20px' }}>
         {type === 'success' && (
           <Button
             variant="success"

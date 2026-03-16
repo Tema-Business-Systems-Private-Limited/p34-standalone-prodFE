@@ -1,5 +1,5 @@
 import React from "react";
-import { useHistory } from "react-router-dom";
+import { withRouter } from "react-router-dom";
 import {
     Row,
     Col,
@@ -12,8 +12,7 @@ import {
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
 
-export default function RolesList() {
-    const history = useHistory();
+function RolesList({ history }) {
     const roles = [
         {
             id: 1,
@@ -120,3 +119,5 @@ export default function RolesList() {
         </Row>
     );
 }
+
+export default withRouter(RolesList);

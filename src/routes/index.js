@@ -180,9 +180,10 @@ const authProtectedRoutes = [
   { path: "/Users/create", component: CreateUser },
   { path: "/Users", component: Users },
 
+  // RoutePlanner 
+  { path: "/dashboard", component: Dashboard },
 
-
-  // { path: "/dashboard", component: Dashboard },
+  // { path: "/dashboard", component: Dashboard }, // legacy
 
   { path: "/usermgmt", component: UserManagement },
 
@@ -292,7 +293,7 @@ const authProtectedRoutes = [
   { path: "/appointment", component: Appointments },
 
   // this route should be at the end of all other routes
-  { path: "/", exact: true, component: () => <Redirect to="/fvehicle" /> },
+  { path: "/", exact: true, component: () => <Redirect to="/dashboard" /> },
 ];
 
 const publicRoutes = [

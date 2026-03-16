@@ -66,7 +66,7 @@ class Login extends Component {
         // this.props.loginUserSuccessful(user);
       })
       .then((user) => {
-        history.push("/usermgmt");
+        history.push("/dashboard");
         //return user;
       })
       .catch((error) => {

@@ -14,7 +14,7 @@ class Alert extends React.Component {
             >
             <Modal.Header style={{ backgroundColor: "#F2DEDE", color: 'white', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                    <Modal.Title id="contained-modal-title-vcenter" style={{ flex: 1 }}>
-                     <div style={{ color: 'black', textAlign: 'left', fontSize: "28px" }}>{this.props.errorMessage}</div>
+                     <div style={{ color: 'black', textAlign: 'left', fontSize: "20px" }}>{this.props.errorMessage}</div>
                    </Modal.Title>
                  </Modal.Header>
              <Modal.Footer style={{ display: 'flex', justifyContent: 'center', padding: '20px' }}>

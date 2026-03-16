@@ -241,7 +241,7 @@ const RightSide = ({
         }));
         setError(""); // Clear error
       } else {
-        // ❌ Show error toast if fields are empty
+        // Show error toast if fields are empty
         setError("Please fill all the fields in Category Table");
         toast.error("Please fill the required fields before adding a new row");
       }
@@ -264,9 +264,9 @@ const RightSide = ({
   //         ...prev,
   //         productCategoryList: [...prev.productCategoryList, newEmptyRow],
   //       }));
-  //       setError(""); // ✅ Clear error if valid
+  //       setError(""); //  Clear error if valid
   //     } else {
-  //       setError("Please fill all the fields in Category Table"); // ✅ Set error like trailerCode
+  //       setError("Please fill all the fields in Category Table"); //  Set error like trailerCode
   //     }
   //   }
   // };
@@ -284,7 +284,7 @@ const RightSide = ({
 
 
     console.log(newRows, "this is new rows 217");
-    // 🔹 Validation like trailerCode
+    //  Validation like trailerCode
     if (value?.trim()) {
       setError("");
     } else {
@@ -351,7 +351,7 @@ const RightSide = ({
       productCategoryList: newRows,
     }));
 
-    // ✅ Show success toast
+    //  Show success toast
     toast.error("Category deleted successfully", {
       autoClose: 3000,
       position: "top-right",
@@ -414,7 +414,7 @@ const RightSide = ({
                   <HomeIcon />
                 </a>
                 <a
-                  style={{
+                  style={{       
                     color: activeTab === "classDetails" ? "green" : "black",
                     borderBottom:
                       activeTab === "classDetails" ? "5px solid green" : "",
@@ -787,7 +787,7 @@ const RightSide = ({
                 onClick={() => addTableRow("prodCategory")}
                 style={{ cursor: "pointer", fontSize: "40px" }}
               />
-            </div>
+            </div>           
 
             <Table responsive striped bordered hover>
               <thead>

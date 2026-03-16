@@ -21,6 +21,11 @@ import DisplayTripLogs from "./DisplayTripLogs";
 import DisplayTrailers from "./DisplayTrailers";
 import { withNamespaces } from "react-i18next";
 import SvgIcon from "@material-ui/core/SvgIcon";
+import { FormControl, InputLabel, Select, ListItemText, InputAdornment } from "@mui/material";
+import ClearIcon from "@mui/icons-material/Clear";
+import { ToastContainer, toast } from 'react-toastify'
+import 'react-toastify/dist/ReactToastify.css'
+
 import {
   convertHrToSec,
   convertMinToSec,
@@ -58,6 +63,7 @@ class TripsList3 extends React.Component {
   constructor(props) {
     super(props);
     this.state = {
+      isInitialRender: true,
       addConfirmShow: false,
       addEquipmentShow: false,
       showLogs: false,
@@ -81,8 +87,177 @@ class TripsList3 extends React.Component {
       enableDocumnetMsgWindow: false,
       Seletedtripindex: "",
       loaderMessage: "",
+      selectedStatuses: [],
+      // sorting state
+      sortField: null,
+      sortOrder: "asc", // or 'desc'
     };
   }
+
+  statusOptions = [
+    "Open",
+    "Optimized",
+    "Locked",
+    "Loaded",
+    "Confirmed",
+    "Trip Completed",
+    "Unloaded in Stage Location",
+    "Returned",
+    "Checked-In",
+    "Loads in Completed",
+    "Counts In Process",
+    "Cashier Reconcillation Completed",
+    "Route Settled",
+    "To Allocate",
+    "Detail Allocated",
+    "To Pick",
+    "Pick Complete",
+    "Supervisor Verified",
+    "Pick Reconciled",
+    "Picking",
+    "Picking Stopped",
+    "Ready To Load",
+    "Partial Detail Allocation",
+    "To Pick*"
+  ];
+
+  componentDidMount() {
+    this.setState({ isInitialRender: false });
+  }
+
+  ListofDlv(DocList) {
+    if (!DocList || !Array.isArray(DocList) || DocList.length === 0) {
+      return null;
+    }
+
+    return (
+      <table>
+        <tbody>
+          {DocList.map((doc, i) => (
+            <tr key={i}>
+              <td>{doc.documentNo}</td>
+              <td>{doc.documentStatus}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    );
+  }
+
+
+
+  /*************************
+   * Sorting helpers
+   *************************/
+  setSort = (field) => {
+    this.setState((prev) => {
+      if (prev.sortField === field) {
+        // toggle
+        return { sortOrder: prev.sortOrder === "asc" ? "desc" : "asc", sortField: field };
+      }
+      return { sortField: field, sortOrder: "asc" };
+    });
+  };
+
+  // helper to render sort symbol, shows default symbol when not sorted
+  renderSortSymbol = (field) => {
+    const { sortField, sortOrder } = this.state;
+    if (sortField === field) {
+      return sortOrder === "asc" ? "▲" : "▼";
+    }
+    return "⇅";
+  };
+
+  // derive a sortable value for a given trip and field
+  getSortValue = (trip, field) => {
+    if (!trip) return "";
+    switch (field) {
+      case "itemCode":
+        return trip.itemCode || "";
+      case "trips":
+        return Number(trip.trips) || 0;
+      case "code":
+        return trip.code || "";
+      case "routeStatus":
+        return trip.routeStatus || "";
+      case "lock":
+        return trip.lock ? 1 : 0;
+      case "tmsValidated":
+        return trip.tmsValidated ? 1 : 0;
+      case "pendingDocStatus":
+        return trip.pendingDocStatus || "";
+      case "driverName":
+        return (trip.driverName && trip.driverName !== "null") ? trip.driverName : "";
+      case "depSite":
+        return trip.depSite || "";
+      case "arrSite":
+        return trip.arrSite || "";
+      case "startTime":
+        // setStartTime returns a formatted time string; we parse to minutes since midnight
+        try {
+          const t = this.setStartTime(trip); // e.g. "08:30"
+          if (!t) return -1;
+          const parts = String(t).split(":");
+          return Number(parts[0] || 0) * 60 + Number(parts[1] || 0);
+        } catch (e) {
+          return -1;
+        }
+      case "endTime":
+        try {
+          const et = trip.endTime || "";
+          if (!et) return -1;
+          const parts = String(et).split(":");
+          return Number(parts[0] || 0) * 60 + Number(parts[1] || 0);
+        } catch (e) {
+          return -1;
+        }
+      case "totalWeight":
+        return parseFloat(trip.totalWeight) || 0;
+      case "totalVolume":
+        return parseFloat(trip.totalVolume) || 0;
+      case "weightPercentage":
+        return parseFloat(trip.weightPercentage) || 0;
+      case "volumePercentage":
+        return parseFloat(trip.volumePercentage) || 0;
+      case "pickups":
+        return Number(trip.pickups) || 0;
+      case "drops":
+        return Number(trip.drops) || 0;
+      case "totalCases":
+        return parseFloat(trip.totalCases) || 0;
+      case "stops":
+        return Number(trip.stops) || 0;
+      default:
+        return trip[field] || "";
+    }
+  };
+
+  compareTrips = (a, b) => {
+    const { sortField, sortOrder } = this.state;
+    if (!sortField) return 0;
+    const va = this.getSortValue(a, sortField);
+    const vb = this.getSortValue(b, sortField);
+
+    // number comparison if both are numbers
+    if (typeof va === "number" && typeof vb === "number") {
+      return sortOrder === "asc" ? va - vb : vb - va;
+    }
+
+    // fallback to string comparison
+    const sa = String(va || "").toLowerCase();
+    const sb = String(vb || "").toLowerCase();
+    if (sa < sb) return sortOrder === "asc" ? -1 : 1;
+    if (sa > sb) return sortOrder === "asc" ? 1 : -1;
+    return 0;
+  };
+
+  /*************************/
+
+  handleCheckboxChange = (i, event) => {
+    if (this.state.isInitialRender) return;
+
+    this.props.updateTripsGeoLocations(i);
+  };
 
   OnValidateTrip = (index) => {
     this.setState({
@@ -120,59 +295,37 @@ class TripsList3 extends React.Component {
 
   onGroupValidateYes = () => {
     this.props.onValidateAll();
-    // console.log("GV - Yes confirm for group Valdiation");
     this.setState({
       addgroupvalidateconfirmShow: false,
     });
   };
 
-  onConfirmClick = (index, opti, lock) => {
+  notifyError = (message) => toast.error(message, { autoClose: 3000, style: { zIndex: 1050 } })
 
-    var trips = this.props.tripsList;
-    var clickedTrip = trips[index];
-    // console.log(clickedTrip ,"this is clicked trip to check things")
-
-    /* console.log(index, opti, lock ,"these are thing we are getting on confirming lock trip")
-    if(clickedTrip.driverId == " " || clickedTrip.driverId == "null"){
-      this.setState({
-        errorMessage: "Please assign a driver to the trip.",
-        addAlertShow: true,
-      });
+  onConfirmClick = (indexOrKey, opti, lock) => {
+    const index = typeof indexOrKey === 'number' ? indexOrKey : this.resolveIndex(indexOrKey);
+    const trips = this.props.tripsList;
+    const clickedTrip = trips[index];
+    if (this.props.isTripModified) {
+      this.notifyError('Please confirm the modified trip prior to locking in order to save the changes.')
       return;
     }
-    */
-    
-    if (lock) {
-      var trips = this.props.tripsList;
-      var clickedTrip = trips[index];
+    if (clickedTrip.driverId == " " || clickedTrip.driverId == "null" || clickedTrip.driverId == "") {
+      this.setState({ errorMessage: "Please add a driver before proceeding.", addAlertShow: true });
+      return;
+    }
 
+    if (lock) {
       if (clickedTrip.tmsValidated) {
-        this.setState({
-          errorMessage: this.props.t("validatedTrip"),
-          addAlertShow: true,
-        });
+        this.setState({ errorMessage: this.props.t("validatedTrip"), addAlertShow: true });
       } else {
-        this.setState({
-          confirmMessage: this.props.t("unlockTrip"),
-          addunlockconfirmShow: true,
-          index: index,
-        });
+        this.setState({ confirmMessage: this.props.t("unlockTrip"), addunlockconfirmShow: true, index });
       }
     } else {
       if (opti === "Optimized") {
-        this.setState({
-          confirmMessage: this.props.t("lockTrip"),
-          addConfirmShow: true,
-          index: index,
-          lockButton: false,
-        });
+        this.setState({ confirmMessage: this.props.t("lockTrip"), addConfirmShow: true, index, lockButton: false });
       } else {
-        this.setState({
-          confirmMessage: this.props.t("optimizelocking"),
-          lockButton: true,
-          addConfirmShow: true,
-          index: index,
-        });
+        this.setState({ confirmMessage: this.props.t("optimizelocking"), lockButton: true, addConfirmShow: true, index });
       }
     }
   };
@@ -183,10 +336,9 @@ class TripsList3 extends React.Component {
     });
   };
 
-     SearchDrops = (e) => {
-          // console.log("search content= ", e.target.value);
-          this.props.updateTripsSearchTerm(e);
-        };
+  SearchDrops = (e) => {
+    this.props.updateTripsSearchTerm(e);
+  };
 
   onConfirmYes = (index) => {
     this.props.onLockRecord(index);
@@ -218,7 +370,6 @@ class TripsList3 extends React.Component {
   };
 
   onTriplogClick = (totobject) => {
-    // console.log("T7 inside trip click", totobject);
     this.setState({
       showLogs: true,
       logs: totobject,
@@ -237,122 +388,104 @@ class TripsList3 extends React.Component {
     return "WVR-" + currDate + "-" + site + "-" + number;
   };
 
-  getLockData = (lock, i, opti) => {
-    if (lock) {
-      return (
-        <span onClick={() => this.onConfirmClick(i, opti, lock)}>
-          <LockRounded style={{ fontSize: 22 }} />
-          <SvgIcon>
-            <path d="M400 224h-24v-72C376 68.2 307.8 0 224 0S72 68.2 72 152v72H48c-26.5 0-48 21.5-48 48v192c0 26.5 21.5 48 48 48h352c26.5 0 48-21.5 48-48V272c0-26.5-21.5-48-48-48zm-104 0H152v-72c0-39.7 32.3-72 72-72s72 32.3 72 72v72z" />
-          </SvgIcon>
-        </span>
-        // <a href="#">
-        //     <svg
-        //     href="#"
-        //     class="svg-inline--fa fa-user-lock fa-w-14"
-        //     aria-hidden="true"
-        //     focusable="false"
-        //     data-prefix="fa"
-        //     data-icon="lock" role="img"
-        //     xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"
-        //     data-fa-i2svg="">
-        //         <path fill="currentColor"
-        //         d="M400 224h-24v-72C376 68.2 307.8 0 224 0S72 68.2 72 152v72H48c-26.5 0-48 21.5-48 48v192c0 26.5 21.5 48 48 48h352c26.5 0 48-21.5 48-48V272c0-26.5-21.5-48-48-48zm-104 0H152v-72c0-39.7 32.3-72 72-72s72 32.3 72 72v72z"></path>
-        //     </svg>
-        // </a>
-      );
-    } else {
-      return (
-        <span onClick={() => this.onConfirmClick(i, opti, lock)}>
-          <LockOpenRoundedIcon color="primary" style={{ fontSize: 22 }} />
-          <SvgIcon>
-            <path d="M400 256H152V152.9c0-39.6 31.7-72.5 71.3-72.9 40-.4 72.7 32.1 72.7 72v16c0 13.3 10.7 24 24 24h32c13.3 0 24-10.7 24-24v-16C376 68 307.5-.3 223.5 0 139.5.3 72 69.5 72 153.5V256H48c-26.5 0-48 21.5-48 48v160c0 26.5 21.5 48 48 48h352c26.5 0 48-21.5 48-48V304c0-26.5-21.5-48-48-48z" />
-          </SvgIcon>
-        </span>
-        // <a href="#" onClick={() => this.onConfirmClick(i,opti)}>
-        //     <svg class="svg-inline--fa fa-user-unlock fa-w-14" id="lockId1" aria-hidden="true" focusable="false" data-prefix="fa" data-icon="unlock" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512" data-fa-i2svg=""><path fill="currentColor" d="M400 256H152V152.9c0-39.6 31.7-72.5 71.3-72.9 40-.4 72.7 32.1 72.7 72v16c0 13.3 10.7 24 24 24h32c13.3 0 24-10.7 24-24v-16C376 68 307.5-.3 223.5 0 139.5.3 72 69.5 72 153.5V256H48c-26.5 0-48 21.5-48 48v160c0 26.5 21.5 48 48 48h352c26.5 0 48-21.5 48-48V304c0-26.5-21.5-48-48-48z"></path></svg>
-        // </a>
-      );
-    }
-  };
 
-  ListofDlv = (DocList) => {
-    return (
-      <table>
-        <tbody></tbody>
-        {DocList &&
-          DocList.map((doc, i) => (
-            <tr key={i}>
-              <td>{doc.documentNo}</td>
-              <td>{doc.documentStatus}</td>
-            </tr>
-          ))}
-      </table>
+  getLockData = (lock, itemCode, opti) => {
+    const onClick = () => this.onConfirmClick(itemCode, opti, lock);
+    return lock ? (
+      <span onClick={onClick}>
+        <LockRounded style={{ fontSize: 22 }} />
+        <SvgIcon><path d="M400 224h-24v-72C376 68.2 307.8 0 224 0S72 68.2 72 152v72H48c-26.5 0-48 21.5-48 48v192c0 26.5 21.5 48 48 48h352c26.5 0 48-21.5 48-48V272c0-26.5-21.5-48-48-48zm-104 0H152v-72c0-39.7 32.3-72 72-72s72 32.3 72 72v72z" /></SvgIcon>
+      </span>
+    ) : (
+      <span onClick={onClick}>
+        <LockOpenRoundedIcon color="primary" style={{ fontSize: 22 }} />
+        <SvgIcon><path d="M400 256H152V152.9c0-39.6 31.7-72.5 71.3-72.9 40-.4 72.7 32.1 72.7 72v16c0 13.3 10.7 24 24 24h32c13.3 0 24-10.7 24-24v-16C376 68 307.5-.3 223.5 0 139.5.3 72 69.5 72 153.5V256H48c-26.5 0-48 21.5-48 48v160c0 26.5 21.5 48 48 48h352c26.5 0 48-21.5 48-48V304c0-26.5-21.5-48-48-48z" /></SvgIcon>
+      </span>
     );
   };
 
-  getVRdetailBtnClick(lock, i, tmsValidated) {
+  resolveIndex = (itemCode) =>
+    this.props.tripsList.findIndex(t => t.itemCode === itemCode);
+
+  getVRdetailBtnClick(lock, i, itemCode, tmsValidated) {
     if (lock) {
-      // console.log("Trip is locked");
-      this.props.onVRClick(i, tmsValidated);
+      this.props.onVRClick(i, itemCode, tmsValidated);
     } else {
-      // console.log("Trip is unlocked");
-      this.props.updateTripsGeolocationbeforelock(i);
+      this.props.updateTripsGeolocationbeforelock(i, itemCode);
     }
   }
 
-  getVrDetailsLink(x, i, tmsValidated) {
-    // if (x == 1) {
+
+  getVrDetailsLink(lock, filteredIndex, tmsValidated, itemCode) {
     return (
-      <a href="#" onClick={() => this.getVRdetailBtnClick(x, i, tmsValidated)}>
-        <i class="fa fa-info-circle fa-lg" aria-hidden="true"></i>
+      <a href="#" onClick={() => this.getVRdetailBtnClick(lock, filteredIndex, itemCode, tmsValidated)}>
+        <i className="fa fa-info-circle fa-lg" aria-hidden="true"></i>
       </a>
     );
-    // }
   }
 
-  getValidatebtn(valid, lock, index, docStatus) {
+  getVRdetailBtnClick = (lock, _filteredIndex, itemCode, tmsValidated) => {
+    const index = this.resolveIndex(itemCode);
+    if (index < 0) return;
+
+    if (lock) {
+      this.props.onVRClick(index, tmsValidated);
+    } else {
+      this.props.updateTripsGeolocationbeforelock(index);
+    }
+  };
+
+  getValidatebtn(valid, lock, itemCode, docStatus) {
     if (!valid && lock) {
       return (
-        <a
-          href="#"
-          onClick={() => this.CheckDocumentStatuForValidation(index, docStatus)}
-        >
-          <i class="fas fa-check-circle" aria-hidden="true"></i>
+        <a href="#" onClick={() => this.CheckDocumentStatuForValidation(itemCode, docStatus)}>
+          <i className="fas fa-check-circle" aria-hidden="true"></i>
         </a>
       );
-    } else {
     }
   }
 
-  CheckDocumentStatuForValidation = (index, docStatus) => {
-    if (docStatus === "Deliverable") {
-      this.CheckValiationStatus(index);
+  CheckDocumentStatuForValidation = (itemCode, docStatus) => {
+    this.CheckValiationStatus(itemCode);
+  };
+
+  CheckValiationStatus = (indexOrKey) => {
+    const index = typeof indexOrKey === 'number' ? indexOrKey : this.resolveIndex(indexOrKey);
+    const Trips = this.props.tripsList;
+    let vflag = true;
+
+    Trips.forEach((trip, i) => {
+      if (i <= index) {
+        if (trip.code == Trips[index].code) {
+          if (trip.trips < Trips[index].trips && trip.tmsValidated == false) {
+            vflag = false;
+          }
+        }
+      }
+    });
+
+    if (vflag) {
+      this.OnValidateTrip(index);
     } else {
-      this.setState({
-        errorMessage: "Documents in Trips are not in Deliverable Status",
-        addAlertShow: true,
-      });
+      this.setState({ errorMessage: "A previous trip for this vehicle has not been validated.", addAlertShow: true });
     }
   };
 
-  onConfirmDeleteClick = (index, tripcode) => {
+  onConfirmDeleteClick = (itemCode, tripcode) => {
     this.setState({
       addDeleteconfirmShow: true,
-      confirmMessage: 'Are you sure you want to delete this trip?',
-      index: index,
-      tripcode: tripcode,
-    });
-  };
-
-  onConfirmDeleteNo = () => {
-    this.setState({
-      addDeleteconfirmShow: false,
+      confirmMessage: 'Are you sure you want to delete the trip?',
+      index: this.resolveIndex(itemCode),   // store original index
+      tripcode,
     });
   };
 
   onConfirmDeleteYes = (index, docnum) => {
     this.props.onCompleteTripDelete(index, docnum);
+    this.setState({ addDeleteconfirmShow: false });
+  };
+
+  onConfirmDeleteNo = () => {
     this.setState({
       addDeleteconfirmShow: false,
     });
@@ -374,7 +507,7 @@ class TripsList3 extends React.Component {
       this.OnValidateTrip(index);
     } else {
       this.setState({
-        errorMessage: "Previous Trip of same vehicle is not validated",
+        errorMessage: "A previous trip for this vehicle has not been validated.",
         addAlertShow: true,
       });
     }
@@ -410,22 +543,16 @@ class TripsList3 extends React.Component {
   };
 
   ForcedSequnce = (i, event) => {
-    // console.log("inside forced", i + "-" + event);
     //this.props.ForcedSequnce(i);
   };
 
   checkForceSeq = (index, check) => {
     let updatedflg;
-    // console.log("inside checkForceSeq", check);
     if (check) {
-      // console.log("inside checkForceSeq true");
       updatedflg = false;
     } else {
-      // console.log("inside checkForceSeq false");
       updatedflg = true;
     }
-    //
-    // console.log("inside checkForceSeq updatedflg", updatedflg);
     //  this.props.onForceseq(this.state.Seletedtripindex, updatedflg);
   };
 
@@ -440,7 +567,6 @@ class TripsList3 extends React.Component {
   };
 
   onSaveloaderNotes = (note) => {
-    // console.log("inside onsaveloadernotes");
     this.props.onloaderMsg(this.state.Seletedtripindex, note);
     this.setState({ enableloaderMsgWindow: false });
   };
@@ -471,188 +597,228 @@ class TripsList3 extends React.Component {
             convertHrToSec(loadHrs);
           return formatTime(time);
         } else {
-           let hr, min,loadingHrs ;
-            if (trip.vehicleObject.starttime.includes(':')) {
-                              hr = trip.vehicleObject.starttime.split(':')[0];
-                              min = trip.vehicleObject.starttime.split(':')[1];
-                          } else if (trip.vehicleObject.starttime.length === 4) {
-                              hr = trip.vehicleObject.starttime.substring(0, 2);
-                              min = trip.vehicleObject.starttime.substring(2, 4);
-                          }
-            loadingHrs = trip.vehicleObject.startdepots;
+          let hr, min, loadingHrs;
+          if (trip.vehicleObject.starttime.includes(':')) {
+            hr = trip.vehicleObject.starttime.split(':')[0];
+            min = trip.vehicleObject.starttime.split(':')[1];
+          } else if (trip.vehicleObject.starttime.length === 4) {
+            hr = trip.vehicleObject.starttime.substring(0, 2);
+            min = trip.vehicleObject.starttime.substring(2, 4);
+          }
+          loadingHrs = trip.vehicleObject.startdepots;
           let loadingTime = this.loadingSecs(hr, min, loadingHrs);
-          // convertHrToSec(loadinghrs)
-          // console.log("loading Time = ", loadingTime)
           return loadingTime;
         }
       } else {
-        let hr, min,loadingHrs ;
-                  if (trip.vehicleObject.starttime.includes(':')) {
-                                    hr = trip.vehicleObject.starttime.split(':')[0];
-                                    min = trip.vehicleObject.starttime.split(':')[1];
-                                } else if (trip.vehicleObject.starttime.length === 4) {
-                                    hr = trip.vehicleObject.starttime.substring(0, 2);
-                                    min = trip.vehicleObject.starttime.substring(2, 4);
-                                }
-                  loadingHrs = trip.vehicleObject.startdepots;
-                let loadingTime = this.loadingSecs(hr, min, loadingHrs);
-                // convertHrToSec(loadinghrs)
-                // console.log("loading Time = ", loadingTime)
-                return loadingTime;
-
-       // return trip.vehicleObject.starttime;
+        let hr, min, loadingHrs;
+        if (trip.vehicleObject.starttime.includes(':')) {
+          hr = trip.vehicleObject.starttime.split(':')[0];
+          min = trip.vehicleObject.starttime.split(':')[1];
+        } else if (trip.vehicleObject.starttime.length === 4) {
+          hr = trip.vehicleObject.starttime.substring(0, 2);
+          min = trip.vehicleObject.starttime.substring(2, 4);
+        }
+        loadingHrs = trip.vehicleObject.startdepots;
+        let loadingTime = this.loadingSecs(hr, min, loadingHrs);
+        return loadingTime;
       }
     }
   }
 
 
-    loadingSecs = (hr, min, loadingHrs) => {
-          if (loadingHrs) {
-              return formatTime(convertHrToSec(hr) + convertMinToSec(min) + convertHrToSec(loadingHrs));
-          } else {
-              return formatTime(convertHrToSec(hr) + convertMinToSec(min));
-          }
-      }
-  /*
-    getOptistatus = (data) => {
-       let result =  nullAndNanChecking(trip.optistatus, 'status')
-       if(result == 'Optimized'){
-         return  {this.props.t('Optimized')}
-        }
-       else {
-        return result;
-      }
+  loadingSecs = (hr, min, loadingHrs) => {
+    if (loadingHrs) {
+      return formatTime(convertHrToSec(hr) + convertMinToSec(min) + convertHrToSec(loadingHrs));
+    } else {
+      return formatTime(convertHrToSec(hr) + convertMinToSec(min));
     }
-    */
+  }
 
-    getStatus(trip) {
-      console.log(trip.routeStatus ,"route status of the trip")
-      if (trip.routeStatus == "Open") {
+  getStatus(trip) {
+    if (trip.routeStatus == "Open") {
+      return (
+        <span
+          class="badge badge-primary text-uppercase"
+          style={{ fontSize: 14 }}
+        >
+          {this.props.t("OPEN")}
+        </span>
+      );
+
+    } else if (trip.routeStatus == "Optimized") {
+      if (trip.generatedBy == "AutoScheduler" || trip.optistatus == "Auto-Optimized") {
         return (
           <span
-            class="badge badge-primary text-uppercase"
+            class="badge badge-secondary text-uppercase"
             style={{ fontSize: 14 }}
           >
-            {this.props.t("OPEN")}
+            {this.props.t("AUTO OPTIMIZED")}
           </span>
         );
-  
-      } else if (trip.routeStatus == "Optimized") {
-        if (trip.generatedBy == "AutoScheduler" || trip.optistatus == "Auto-Optimized") {
-          return (
-            <span
-              class="badge badge-secondary text-uppercase"
-              style={{ fontSize: 14 }}
-            >
-              {this.props.t("AUTO OPTIMIZED")}
-            </span>
-          );
-        } else {
-          return (
-            <span
-              class="badge badge-secondary text-uppercase"
-              style={{ fontSize: 14 }}
-            >
-              {this.props.t("OPTIMIZED")}
-            </span>
-          );
-        }
-      } else if (trip.routeStatus == "Locked") {
+      } else {
         return (
-          <span class="badge badge-info text-uppercase" style={{ fontSize: 14 }}>
-            {this.props.t("LOCKED")}
-          </span>
-        );
-      } else if (trip.routeStatus == "To Load" || trip.routeStatus == "Load To Truck/Trailer") {
-        return (
-          <span class="badge badge-dark text-uppercase" style={{ fontSize: 14 }}>
-            {this.props.t("TO LOAD")}
-          </span>
-        );
-      } else if (trip.routeStatus == "Confirmed") {
-          return (
-            <span
-              class="badge badge-warning text-uppercase"
-              style={{ fontSize: 14 }}
-            >
-              {this.props.t("LOAD CONFIRMED")}{" "}
-            </span>
-          );
-      } else if (trip.routeStatus == "Load To Truck" || trip.routeStatus == "Loaded") {
-        return (
-            <span
-              class="badge badge-warning text-uppercase"
-              style={{ fontSize: 14 }}
-            >
-              {this.props.t("LOADED")}
-            </span>
-          );
-      } else if (trip.routeStatus == "Trip Completed") {
-          return (
-            <span
-              class="badge badge-success text-uppercase"
-              style={{ fontSize: 14 }}
-            >
-              Trip Completed
-            </span>
-          );
-      } else if (trip.routeStatus == "Unloaded") {
-          return (
-            <span
-              class="badge badge-success text-uppercase"
-              style={{ fontSize: 14 }}
-            >
-              UNLOADED
-            </span>
-          );
-      } else if (trip.routeStatus == "Returned") {
-          return (
-            <span
-              class="badge badge-success text-uppercase"
-              style={{ fontSize: 14 }}
-            >
-              Returned
-            </span>
-          );
-      } else if (trip.routeStatus == "All") {
-          return (
-            <span
-              class="badge badge-success text-uppercase"
-              style={{ fontSize: 14 }}
-            >
-              ALL
-            </span>
-          );
-      } else if (trip.routeStatus == "Checked-In") {
-          return (
-            <span
-              class="badge badge-success text-uppercase"
-              style={{ fontSize: 14 }}
-            >
-              Checked In
-            </span>
-          );
-      } else if (trip.routeStatus == "Checked-Out" || trip.routeStatus == "CheckOut") {
-          return (
-            <span
-              class="badge badge-success text-uppercase"
-              style={{ fontSize: 14 }}
-            >
-              Checked Out
-            </span>
-          );
-      } 
-        else {
-        return (
-          <span class="badge badge-dark text-uppercase" style={{ fontSize: 14 }}>
-            {this.props.t("OPEN")}
+          <span
+            class="badge badge-secondary text-uppercase"
+            style={{ fontSize: 14 }}
+          >
+            {this.props.t("OPTIMIZED")}
           </span>
         );
       }
+    } else if (trip.routeStatus == "Locked") {
+      return (
+        <span class="badge badge-info text-uppercase" style={{ fontSize: 14 }}>
+          {this.props.t("LOCKED")}
+        </span>
+      );
+    } else if (trip.routeStatus == "To Load") {
+      return (
+        <span class="badge badge-dark text-uppercase" style={{ fontSize: 14 }}>
+          {this.props.t("TO LOAD")}
+        </span>
+      );
+    } else if (trip.routeStatus == "Confirmed") {
+      return (
+        <span
+          class="badge badge-warning text-uppercase"
+          style={{ fontSize: 14 }}
+        >
+          {this.props.t("LOAD CONFIRMED")} {" "}
+        </span>
+      );
+    } else if (trip.routeStatus == "Load To Truck" || trip.routeStatus == "Loaded") {
+      return (
+        <span
+          class="badge badge-warning text-uppercase"
+          style={{ fontSize: 14 }}
+        >
+          {this.props.t("LOADED")}
+        </span>
+      );
+    } else if (trip.routeStatus == "Trip Completed") {
+      return (
+        <span
+          class="badge badge-success text-uppercase"
+          style={{ fontSize: 14 }}
+        >
+          Trip Completed
+        </span>
+      );
+    } else if (trip.routeStatus == "Unloaded") {
+      return (
+        <span
+          class="badge badge-success text-uppercase"
+          style={{ fontSize: 14 }}
+        >
+          UNLOADED
+        </span>
+      );
+    } else if (trip.routeStatus == "Returned") {
+      return (
+        <span
+          class="badge badge-success text-uppercase"
+          style={{ fontSize: 14 }}
+        >
+          Returned
+        </span>
+      );
+    } else if (trip.routeStatus == "All") {
+      return (
+        <span
+          class="badge badge-success text-uppercase"
+          style={{ fontSize: 14 }}
+        >
+          ALL
+        </span>
+      );
+    } else if (trip.routeStatus == "Checked-In") {
+      return (
+        <span
+          class="badge badge-success text-uppercase"
+          style={{ fontSize: 14 }}
+        >
+          Checked In
+        </span>
+      );
+    } else if (trip.routeStatus == "Checked-Out") {
+      return (
+        <span
+          class="badge badge-success text-uppercase"
+          style={{ fontSize: 14 }}
+        >
+          Checked Out
+        </span>
+      );
     }
+    else if (trip.routeStatus == "To Allocate") {
+      return (
+        <span
+          class="badge badge-success text-uppercase"
+          style={{ fontSize: 14 }}
+        >
+          To Allocate
+        </span>
+      );
+    }
+    else if (trip.routeStatus == "Pick Complete") {
+      return (
+        <span
+          class="badge badge-success text-uppercase"
+          style={{ fontSize: 14 }}
+        >
+          Pick Complete
+        </span>
+      );
+    }
+    else if (trip.routeStatus == "To Pick") {
+      return (
+        <span
+          class="badge badge-success text-uppercase"
+          style={{ fontSize: 14 }}
+        >
+          To Pick
+        </span>
+      );
+    }
+    else if (trip.routeStatus == "Supervisor Verified") {
+      return (
+        <span
+          class="badge badge-success text-uppercase"
+          style={{ fontSize: 14 }}
+        >
+          Supervisor Verified
+        </span>
+      );
+    }
+    else if (trip.routeStatus == "Loads In Reconciled") {
+      return (
+        <span
+          class="badge badge-success text-uppercase"
+          style={{ fontSize: 14 }}
+        >
+          Loads In Reconciled
+        </span>
+      );
+    }
+    else {
+      return (
+        <span class="badge badge-dark text-uppercase" style={{ fontSize: 14 }}>
+          {trip.routeStatus}
+        </span>
+      );
+    }
+  }
+
+  handleStatusFilterChange = (event) => {
+    const { value } = event.target;
+    this.setState({
+      selectedStatuses: typeof value === "string" ? value.split(",") : value,
+    });
+  };
+
+
   render() {
-   let filterTrips;
-    // console.log("T6 data in trips", this.props.tripsList);
+    let filterTrips;
     const currDate = moment(this.props.date).format("YYMMDD");
     let addEquipmentClose = () => this.setState({ addEquipmentShow: false });
     let addTrailClose = () => this.setState({ addTrailShow: false });
@@ -662,27 +828,35 @@ class TripsList3 extends React.Component {
 
 
 
-         if (this.props.tripsList) {
-              filterTrips = this.props.tripsList?.filter(
-                (trip) => {
-                   return (((trip.code.toLowerCase().indexOf(
-                             this.props.searchTrip.toLowerCase()
-                           ) !== -1) || (trip.itemCode.toLowerCase().indexOf(
-                             this.props.searchTrip.toLowerCase()
-                           ) !== -1) || (trip.driverId.toLowerCase().indexOf(
-                             this.props.searchTrip.toLowerCase()
-                           ) !== -1) || (trip.driverName.toLowerCase().indexOf(
-                             this.props.searchTrip.toLowerCase()
-                           ) !== -1)));
-           }
-           )}
+    if (this.props.tripsList) {
+      filterTrips = this.props.tripsList?.filter((trip) => {
+        const search = this.props.searchTrip.toLowerCase().trim();
 
+        const matchesSearch =
+          trip.code?.toLowerCase().includes(search) ||
+          trip.itemCode?.toLowerCase().includes(search) ||
+          (trip.driverId && trip.driverId.toLowerCase().includes(search)) ||
+          (trip.driverName && trip.driverName.toLowerCase().includes(search)) ||
+          (trip.routeStatus && trip.routeStatus.toLowerCase().includes(search)) ||
+          (trip.pendingDocStatus && trip.pendingDocStatus.toLowerCase().includes(search));
 
+        const matchesStatus =
+          this.props.selectedTripStatuses.length === 0 ||
+          this.props.selectedTripStatuses.includes(trip.routeStatus);
+
+        return matchesSearch && matchesStatus;
+      });
+
+      // apply sorting if set
+      if (this.state.sortField) {
+        filterTrips = filterTrips.slice().sort(this.compareTrips);
+      }
+    }
 
 
     return (
       <>
-        <Card className="mb-3">
+        <Card className="mb-3" style={{ height: "460px" }}>
           <CardBody className="p-2">
             <Row className="mb-2">
               <Col md="4">
@@ -693,8 +867,51 @@ class TripsList3 extends React.Component {
                     placeholder={this.props.t("SearchCaption")}
                     className="form-control"
                     onChange={this.SearchDrops}
+                    value={this.props.searchTrip}
                   />
                 </FormGroup>
+              </Col>
+              <Col md="8">
+                <FormControl fullWidth size="small">
+                  <InputLabel>Filter by Status</InputLabel>
+                  <Select
+                    multiple
+                    value={this.props.selectedTripStatuses}
+                    onChange={this.props.handleTripStatusFilterChange}
+                    renderValue={(selected) => selected.join(", ")}
+                    MenuProps={{
+                      PaperProps: {
+                        style: {
+                          maxHeight: 250, // limit popup height
+                          width: "auto",
+                        },
+                      },
+                    }}
+                    endAdornment={
+                      this.props.selectedTripStatuses.length > 0 && (
+                        <InputAdornment position="end" sx={{ marginRight: "10px" }}>
+                          <IconButton
+                            size="small"
+                            onClick={(e) => {
+                              e.stopPropagation(); // prevent dropdown opening
+                              this.props.clearTripStatusFilterSelections();
+                            }}
+                          >
+                            <ClearIcon fontSize="small" />
+                          </IconButton>
+                        </InputAdornment>
+                      )
+                    }
+                  >
+                    {this.statusOptions.map((status) => (
+                      <MenuItem key={status} value={status}>
+                        <Checkbox checked={this.props.selectedTripStatuses.indexOf(status) > -1} />
+                        <ListItemText primary={status} />
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+
               </Col>
             </Row>
             <div className="reportlist-view tablheight">
@@ -703,37 +920,55 @@ class TripsList3 extends React.Component {
                   <tr className="">
 
                     <th className="pl-2">
-                      <input
-                        type="checkbox"
-                        id="tripsCheckBoxAll"
-                        onClick={() => this.selectAllTripsPanel()}
-                      />
+
                     </th>
                     <th></th>
                     <th> {this.props.t("Details")}</th>
-                    <th> {this.props.t("TripCode")}</th>
-                    <th width="4%"> {this.props.t("Seq")} #</th>
-                    <th width="6%"> {this.props.t("Vehicle")}</th>
-                    <th width="4%"> {this.props.t("Status")}</th>
-                    <th width="3%"> {this.props.t("Lock")}</th>
+                    <th>
+                      <a href="#" onClick={(e) => { e.preventDefault(); this.setSort('itemCode'); }}>
+                        {this.props.t("TripCode")} {this.renderSortSymbol('itemCode')}
+                      </a>
+                    </th>
+                    <th width="4%">
+                      <a href="#" onClick={(e) => { e.preventDefault(); this.setSort('trips'); }}>
+                        {this.props.t("Seq")} # {this.renderSortSymbol('trips')}
+                      </a>
+                    </th>
+                    <th width="6%">
+                      <a href="#" onClick={(e) => { e.preventDefault(); this.setSort('code'); }}>
+                        {this.props.t("Vehicle")} {this.renderSortSymbol('code')}
+                      </a>
+                    </th>
+                    <th width="4%">
+                      <a href="#" onClick={(e) => { e.preventDefault(); this.setSort('routeStatus'); }}>
+                        {this.props.t("Status")} {this.renderSortSymbol('routeStatus')}
+                      </a>
+                    </th>
+                    <th width="3%">
+
+                      {this.props.t("Lock")}
+
+                    </th>
                     <th width="6%"> {this.props.t("Validate")}</th>
-                    <th width="6%"> {this.props.t("Validation")}</th>
-                    <th width="6%"> {this.props.t("Driver")}</th>
-                    <th> {this.props.t("DepartureSite")}</th>
-                    <th> {this.props.t("ArrivalSite")}</th>
-                    <th> Document Status </th>
-                     <th width="1%"> {this.props.t("Trailer")}</th>
-                    { /*<th width="1%"> {this.props.t("Equipment")}</th> */}
-                    <th width="2%"> {this.props.t("Departure")}</th>
-                    <th width="2%"> {this.props.t("Arrival")}</th>
-                    <th width="6%"> Tot {this.props.t("Weight")}</th>
-                    <th width="6%"> Tot {this.props.t("Volume")}</th>
-                    <th width="6%">% {this.props.t("Weight")} </th>
-                    <th width="6%">% {this.props.t("Volume")}</th>
-                    <th width="6%"> Pickups</th>
-                    <th width="6%"> Deliveries</th>
-                    <th width="6%"> {this.props.t("Stops")}</th>
-                    {/* <th width="6%"> Log </th> */}
+                    <th width="6%">
+
+                      {this.props.t("Validation")}
+
+                    </th>
+                    <th>{"Document Status"} </th>
+                    <th width="6%"><a href="#" onClick={(e) => { e.preventDefault(); this.setSort('driverName'); }}>{this.props.t("Driver")} {this.renderSortSymbol('driverName')}</a></th>
+                    <th>{this.props.t("DepartureSite")}</th>
+                    <th>{this.props.t("ArrivalSite")}</th>
+                    <th width="2%"><a href="#" onClick={(e) => { e.preventDefault(); this.setSort('startTime'); }}>{this.props.t("Departure")} {this.renderSortSymbol('startTime')}</a></th>
+                    <th width="2%"><a href="#" onClick={(e) => { e.preventDefault(); this.setSort('endTime'); }}>{this.props.t("Arrival")} {this.renderSortSymbol('endTime')}</a></th>
+                    <th width="6%"><a href="#" onClick={(e) => { e.preventDefault(); this.setSort('totalWeight'); }}>{"Tot " + this.props.t("Weight")} {this.renderSortSymbol('totalWeight')}</a></th>
+                    <th width="6%"><a href="#" onClick={(e) => { e.preventDefault(); this.setSort('totalVolume'); }}>{"Tot " + this.props.t("Volume")} {this.renderSortSymbol('totalVolume')}</a></th>
+                    <th width="6%"><a href="#" onClick={(e) => { e.preventDefault(); this.setSort('weightPercentage'); }}>{"% " + this.props.t("Weight")} {this.renderSortSymbol('weightPercentage')}</a></th>
+                    <th width="6%"><a href="#" onClick={(e) => { e.preventDefault(); this.setSort('volumePercentage'); }}>{"% " + this.props.t("Volume")} {this.renderSortSymbol('volumePercentage')}</a></th>
+                    {/* <th width="6%">{"Pickups"}</th> */}
+                    <th width="6%"><a href="#" onClick={(e) => { e.preventDefault(); this.setSort('drops'); }}>{"Deliveries"} {this.renderSortSymbol('drops')}</a></th>
+                    <th width="6%"><a href="#" onClick={(e) => { e.preventDefault(); this.setSort('totalCases'); }}>{"Total Pallets"} {this.renderSortSymbol('totalCases')}</a></th>
+                    <th width="6%"><a href="#" onClick={(e) => { e.preventDefault(); this.setSort('stops'); }}>{this.props.t("Stops")} {this.renderSortSymbol('stops')}</a></th>
                   </tr>
                 </thead>
                 <tbody>
@@ -749,9 +984,8 @@ class TripsList3 extends React.Component {
                           <input
                             type="checkbox"
                             name="tripsCheckBox"
-                            onClick={() =>
-                              this.props.updateTripsGeoLocations(i)
-                            }
+                            checked={this.props.selectedCheckBoxes.includes(i)}
+                            onChange={(e) => this.props.updateTripsGeoLocations(i, trip.itemCode)}
                           />
                         </td>
                         <td>
@@ -765,7 +999,7 @@ class TripsList3 extends React.Component {
                               data-placement="top"
                               title="Delete"
                               onClick={() =>
-                                this.onConfirmDeleteClick(i, trip.docnum)
+                                this.onConfirmDeleteClick(trip.itemCode, trip.docnum)
                               }
                               disabled={trip.lock}
                             >
@@ -777,7 +1011,7 @@ class TripsList3 extends React.Component {
                           {this.getVrDetailsLink(
                             trip.lock,
                             i,
-                            trip.tmsValidated
+                            trip.tmsValidated, trip.itemCode
                           )}
                         </td>
                         <td>
@@ -790,13 +1024,6 @@ class TripsList3 extends React.Component {
                           <b>{trip.code}</b>
                         </td>
                         <td width="4%">
-                          {/* <span style={{ fontSize: "12pt" }}>
-                            {trip.generatedBy === "AutoScheduler" ? "AUTO-OPTIMISED" :
-                            trip.optistatus ? trip.optistatus == "Optimized"
-                                ? this.props.t("Optimized")
-                                : nullAndNanChecking(trip.optistatus, "status")
-                              : "Open"}
-                          </span> */}
                           <span style={{ fontSize: "12pt" }}>
                             {this.getStatus(trip)}
                           </span>
@@ -804,7 +1031,7 @@ class TripsList3 extends React.Component {
                         <td width="3%">
                           {this.getLockData(
                             trip.lock,
-                            i,
+                            trip.itemCode,
                             trip.optistatus || "open"
                           )}
                         </td>
@@ -812,7 +1039,7 @@ class TripsList3 extends React.Component {
                           {this.getValidatebtn(
                             trip.tmsValidated,
                             trip.lock,
-                            i,
+                            trip.itemCode,
                             trip.pendingDocStatus
                           )}
                         </td>
@@ -827,14 +1054,11 @@ class TripsList3 extends React.Component {
                             })()}
                           </span>{" "}
                         </td>
-                        <td width="6%">{trip.driverName === "null" ? '' : trip.driverName }</td>
-                        <td>{trip.depSite}</td>
-                        <td>{trip.arrSite}</td>
                         <td>
                           {trip.lock ? (
                             <div>
                               {trip.pendingDocStatus}{" "}
-                              <Tooltip title={this.ListofDlv(trip.docDetails)}>
+                              <Tooltip title={trip.docDetails ? this.ListofDlv(trip.docDetails) : ""}>
                                 <IconButton>
                                   <InfoOutlinedIcon color="blue" />
                                 </IconButton>
@@ -844,35 +1068,14 @@ class TripsList3 extends React.Component {
                             ""
                           )}
                         </td>
+                        <td width="6%">{trip.driverName === "null" ? '' : trip.driverName}</td>
+                        <td>{trip.depSite}</td>
+                        <td>{trip.arrSite}</td>
 
-                         <td width="1%">
-                          <a
-                            className="custom-anchor"
-                            href="#"
-                            onClick={() =>
-                              this.onTrailerClick(trip.trialerObject)
-                            }
-                          >
-                            {trip.trialerObject && trip.trialerObject.length > 0
-                              ? trip.trialerObject.length
-                              : 0}
-                          </a>
-                        </td>
-                        {/* <td width="1%">
-                          <a
-                            className="custom-anchor"
-                            href="#"
-                            onClick={() =>
-                              this.onEquipmentClick(trip.equipmentObject)
-                            }
-                          >
-                            {this.displayEquipments(trip)}
-                          </a>
-                        </td> */}
                         <td width="2%">{this.setStartTime(trip)}</td>
                         <td width="2%">
-                          {trip.optistatus === "Open" ||
-                          trip.optistatus === "open"
+                          {(trip.optistatus === "Open" ||
+                            trip.optistatus === "open") && !trip.lock
                             ? ""
                             : nullAndNanChecking(trip.endTime, "time")}
                         </td>
@@ -881,25 +1084,12 @@ class TripsList3 extends React.Component {
                         <td width="6%">{trip.weightPercentage}</td>
                         <td width="6%">{trip.volumePercentage}</td>
 
-                        <td width="2%">{trip.pickups}</td>
-                        <td width="2%">{trip.drops}</td>
+                        {/* <td width="2%">{trip.pickups}</td> */}
+                        <td width="2%">{trip.stops}</td>
+                        <td width="2%">{parseFloat(trip.totalCases).toFixed(2)} PAL</td>
                         <td width="6%">
                           <span className="">{trip.stops}</span>
                         </td>
-                        {/* <td data-toggle="tooltip" data-placement="top">
-                          <a
-                            href="#"
-                            onClick={() =>
-                              this.onTriplogClick(trip.totalObject)
-                            }
-                          >
-                            <i class="fa fa-info-circle" aria-hidden="true"></i>
-                          </a>
-                        </td> */}
-                        {/* <td width="2%"><a href="#" onClick = {() => this.props.onVRClick(trip) }><i class="fa fa-info-circle"
-                                            aria-hidden="true"></i></a></td> */}
-                        {/* <td width="2%"><a href="#" onClick = {() => this.props.onVRClick(i)}><i class="fa fa-info-circle"
-                                        aria-hidden="true"></i></a></td> */}
                       </tr>
                     )
                   )}

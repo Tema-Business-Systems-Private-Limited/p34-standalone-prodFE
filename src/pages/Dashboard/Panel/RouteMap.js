@@ -229,22 +229,22 @@ class RouteMap extends React.Component {
                      var url = "";
                      var content;
                      if (place.doctype == 'PRECEIPT') {
-                         url = `${process.env.REACT_APP_X3_URL}/$sessions?f=GESXX10CPTH/2//M/` + place.docnum;
+                         url = `${process.env.REACT_APP_X3_URL_EXTERNAL}/$sessions?f=GESXX10CPTH/2//M/` + place.docnum;
                          content = "<div id='content'><div id='siteNotice'></div><div id = 'bodyContent'><a href=" + url + " target='_blank'>" + place.docnum + "</a></br>" + place.bpname + "</br>" + place.poscode + " - " + place.city + "</div></div>";
 
                      }
                      else if (place.doctype == 'DLV') {
-                         url = `${process.env.REACT_APP_X3_URL}/$sessions?f=GESSDH/2//M/` + place.docnum;
+                         url = `${process.env.REACT_APP_X3_URL_EXTERNAL}/$sessions?f=GESSDH/2//M/` + place.docnum;
                          content = "<div id='content'><div id='siteNotice'></div><div id = 'bodyContent'><a href=" + url + " target='_blank'>" + place.docnum + "</a></br>" + place.bpname + "</br>" + place.poscode + " - " + place.city + "</div></div>";
 
                      }
                      else if (place.doctype == 'PICK') {
-                         url = `${process.env.REACT_APP_X3_URL}/$sessions?f=GESPRH2/2//M/` + place.docnum;
+                         url = `${process.env.REACT_APP_X3_URL_EXTERNAL}/$sessions?f=GESPRH2/2//M/` + place.docnum;
                          content = "<div id='content'><div id='siteNotice'></div><div id = 'bodyContent'><a href=" + url + " target='_blank'>" + place.docnum + "</a></br>" + place.bpname + "</br>" + place.poscode + " - " + place.city + "</div></div>";
 
                      }
                      else {
-                         url = `${process.env.REACT_APP_X3_URL}/$sessions?f=GESFCY/2//M/` + place.docnum;
+                         url = `${process.env.REACT_APP_X3_URL_EXTERNAL}/$sessions?f=GESFCY/2//M/` + place.docnum;
                          content = "<div id='content'><div id='siteNotice'></div><div id = 'bodyContent'><a href=" + url + " target='_blank'>" + SiteCode + "," + place.docnum + "</a></br>" + place.city + "</div></div>";
 
                      }

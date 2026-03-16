@@ -1,1633 +1,3594 @@
-import React, { Component, createRef } from 'react'
-import $ from 'jquery';
-import 'jquery-ui/ui/widgets/sortable';
-import { ToastContainer, toast } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css";
-import DeleteConfirm from './DeleteConfirm';
-import DisplayProducts from './DisplayProducts';
-import ProductsDetailList from './ProductsDetailList';
-import { withNamespaces } from 'react-i18next';
-import { convertHrToSec, formatTime } from '../converterFunctions/converterFunctions';
-import DisplayNotes from './DisplayNotes';
-import DisplayCarrierNotes from './DisplayCarrierNotes';
-import IconButton from '@material-ui/core/IconButton';
-import Menu from '@material-ui/core/Menu';
-import { AlertCircle } from 'lucide-react'
-import MenuItem from '@material-ui/core/MenuItem';
-import MoreVertIcon from '@material-ui/icons/MoreVert';
-import PopupState, { bindTrigger, bindMenu } from "material-ui-popup-state";
-import '../dashboard.scss';
+// ===================== IMPORTS =====================
+import React from 'react'
+import $ from 'jquery'
+import 'jquery-ui/ui/widgets/sortable'
+import { ToastContainer, toast } from 'react-toastify'
+import 'react-toastify/dist/ReactToastify.css'
+import DeleteConfirm from './DeleteConfirm'
+import DisplayProducts from './DisplayProducts'
+import ProductsDetailList from './ProductsDetailList'
+import { withNamespaces } from 'react-i18next'
 import {
-    Container,
-    Row,
-    Col,
-    Card,
-    CardBody,
-    CardTitle,
-    Nav,
-    NavItem,
-    NavLink,
-    TabContent,
-    TabPane,
-    ButtonGroup,
-    Button,
-    Input,
-    Label,
-    FormGroup,
-    Table,
-    Modal,
-    ModalHeader,
-    ModalBody,
-    ModalFooter,
-    Form,
-} from "reactstrap";
+  convertHrToSec,
+  formatTime,
+} from '../converterFunctions/converterFunctions'
+import DisplayNotes from './DisplayNotes'
+import DisplayCarrierNotes from './DisplayCarrierNotes'
+import IconButton from '@material-ui/core/IconButton'
+import Menu from '@material-ui/core/Menu'
+import MenuItem from '@material-ui/core/MenuItem'
+import MoreVertIcon from '@material-ui/icons/MoreVert'
+import PopupState, { bindTrigger, bindMenu } from 'material-ui-popup-state'
+import '../dashboard.scss'
+import {
+  Container,
+  Row,
+  Col,
+  Card,
+  CardBody,
+  CardTitle,
+  Nav,
+  NavItem,
+  NavLink,
+  TabContent,
+  TabPane,
+  ButtonGroup,
+  Button,
+  Input,
+  Label,
+  FormGroup,
+  Table,
+  Modal,
+  ModalHeader,
+  ModalBody,
+  ModalFooter,
+  Form,
+} from 'reactstrap'
 
-const x3Url = process.env.REACT_APP_X3_URL;
+const x3Url = process.env.REACT_APP_X3_URL_EXTERNAL
+
+// ===================== UTILS =====================
+const compactArray = (arr) =>
+  Array.isArray(arr) ? arr.filter((_, i) => i in arr) : []
 
 function renumber_table(tableID) {
-    $(tableID + " tr").each(function () {
-        let data = $(this).find('.type')[0];
-        if (data) {
-            var classCss;
-            if (data.innerText === 'PICK' || data.innerText === 'PREP EXP') {
-                classCss = 'badge-primary'
-            } else if (data.innerText === 'PRECEIPT' || data.innerText === 'ENLV') {
-                classCss = 'badge-warning'
-
-            } else {
-                //LIV-->DLV
-                classCss = 'badge-success'
-            }
-            var count = $(this).parent().children().index($(this)) + 1;
-            var innerHTML = `<span class='badge ${classCss}  text-uppercase'>` + count + "</span>";
-            $(this).find('.priority').html(innerHTML);
-        }
-    });
+  $(tableID + ' tr').each(function () {
+    let data = $(this).find('.type')[0]
+    if (!data) return
+    const count = $(this).parent().children().index($(this)) + 1
+    $(this).find('.priority').html(
+      `<span class='badge badge-primary'>${count}</span>`
+    )
+  })
 }
 
-const options = [
-    'Document Message'
-];
 
-const ITEM_HEIGHT = 48;
 
+
+// ===================== COMPONENT =====================
 class RouteMap extends React.Component {
-    constructor(props) {
-        super(props);
-        this.state = {
-            isMap: true,
-            isList: false,
-            index: -1,
-            docnum: '',
-            addConfirmShow: false,
-            confirmMessage: '',
-            addProductShow: false,
-            isFullScreen : false,
-            products: [],
-            docNumber: "",
-            doctype: "",
-            sortable: false,
-            groData: this.props.geoData || [],
-            vehicleCode: '',
-            enableDocumnetMsgWindow: false,
-            enableCarrierMsgWindow: false,
-            selectedDocNumber: '',
-            noteMessage: '',
-            noteMessageflg: false,
-            carrierMessage: '',
-            instructionType: '',
-            anchorEl: null
-        }
-    }
+  constructor(props) {
+    super(props)
 
-    componentDidMount() {
-        this.updateMap();
-        //Make diagnosis table sortable
-        $("#diagnosis_list tbody").sortable({
-            stop: function (e, ui) {
-                let lock = ui.item[0].innerHTML;
-                if (lock.includes('unlock')) {
-                    renumber_table('#diagnosis_list')
-                } else {
-                    $(this).sortable('cancel');
-                    $(ui.sender).sortable('cancel');
-                }
-            }
-        });
-    }
+    // 🔹 MAP SINGLETONS
+    this.map = null
+    this.markersByDoc = {}
+    this.spiderfier = null
+    this.isSpiderfierLoading = false
+    this.directionsService = null
+    this.directionsRenderer = null
+    this.isRowHoverPopupActive = false
+    this.isResizingSplit = false
 
-    showMap = () => {
-        this.setState({
-            isMap: true,
-            isList: false
-        });
-    }
-
-    showList = () => {
-        this.setState({
-            isMap: false,
-            isList: true
-        });
-    }
-
-    customControl = (controlDiv, map) => {
-        const controlUI = document.createElement("div");
-        controlUI.style.backgroundColor = "#fff";
-        controlUI.style.border = "2px solid #fff";
-        controlUI.style.borderRadius = "2px";
-        controlUI.style.boxShadow = "0 2px 6px rgba(0,0,0,.3)";
-        controlUI.style.cursor = "pointer";
-        //controlUI.style.marginBottom = "22px";
-        controlUI.style.textAlign = "center";
-        controlUI.title = "Click to recenter the map";
-        controlDiv.appendChild(controlUI);
-        // Set CSS for the control interior.
-        const controlText = document.createElement("div");
-        controlText.style.color = "rgb(25,25,25)";
-        controlText.style.fontFamily = "Roboto,Arial,sans-serif";
-        controlText.style.fontWeight = "bold";
-        controlText.style.fontSize = "12px";
-        controlText.style.lineHeight = "15px";
-        controlText.style.paddingLeft = "2px";
-        controlText.style.paddingRight = "2px";
-        controlText.innerHTML = this.props.t('listview');
-        controlUI.appendChild(controlText);
-        // Setup the click event listeners: simply set the map to Chicago.
-        controlUI.addEventListener("click", () => {
-            this.showList();
-        });
+    this.state = {
+      isMap: true,
+      isList: false,
+      isFullScreen: false,
+      isMapFullscreen: false,
+      isSplitView: false,
+      isPanelOpen: false,
+      addConfirmShow: false,
+      addConfirmDeleteShow: false,
+      addTripConfirmShow: false,
+      tripConfirmPending: false,
+      warningflg: false,
+      confirmMessage: '',
+      showToPlanDocs: false,
+      index: -1,
+      docnum: '',
+      vehicleCode: '',
+      addProductShow: false,
+      products: [],
+      docNumber: '',
+      doctype: '',
+      sortable: false,
+      reorderedGeoData: null,
+      ShowDetailList: false,
+      enableDocumnetMsgWindow: false,
+      enableCarrierMsgWindow: false,
+      selectedDocNumber: '',
+      noteMessage: '',
+      carrierMessage: '',
+      instructionType: '',
+      anchorEl: null,
+      stagedAddDocs: [],
+      stagedRemoveDocs: [],
+      pendingDoc: null,
+      pendingMarker: null,
+      pendingRemoveDoc: null,
+      removeConfirmShow: false,
+      isTripPanelOpen: false,
+      multiDragConfirmShow: false,
+      pendingDropPoint: null,
+      pendingSameCoordDocs: [],
+      splitMapHeightPct: 40,
 
     }
+  }
 
-    buildContent = (place) => {
-        // const url = "${process.env.REACT_APP_X3_URL}/$sessions?f=GESSDH/2/M/" + place.docnum;
-        const url = `${process.env.REACT_APP_X3_URL}/$sessions?f=GESSDH/2//M/` + place.docnum;
-        return (
-            <div id="content">
-                <div id="siteNotice"></div>
-                <div id="bodyContent">
-                    {place.docnum && <a href={url}>{place.docnum}</a>}
-                    {place.city}
-                </div>
-            </div>
-        );
+
+
+  // ===================== LIFECYCLE =====================
+  componentDidMount() {
+    document.addEventListener('fullscreenchange', this.handleFS)
+
+    if (this.state.isMap) {
+      this.initMapOnce()
+      this.initDirectionsOnce()
+      this.createSiteMarkers()
+      this.updateMarkers()
+      this.updateTripPolyline()
     }
-
-
-    createCustomMarkerIcon = (baseColor, docnum) =>  {
-
-
-      const docSeq = this.props.selectedTrip?.totalObject?.selectedTripData?.findIndex((doc) => doc.docnum === docnum);
-            let seq = 0;
-            // Check if docSeq was found (not -1)
-            if (docSeq !== -1) {
-                seq = docSeq + 1;  // Return the index of the found document
-            } else {
-                seq = -1;  // Return -1 if no document with the given docnum is found
-            }
-        const canvas = document.createElement('canvas');
-         canvas.width = 50;
-            canvas.height = 70; // Taller to accommodate the pin shape
-            const ctx = canvas.getContext('2d');
-  ctx.beginPath();
-    ctx.arc(30, 30, 20, 0, 2 * Math.PI); // Circle at the top
-    ctx.fillStyle = baseColor; // Fill with the base color
-    ctx.fill();
-
-    // Add border to the circle
-    ctx.lineWidth = 3;
-    ctx.strokeStyle = 'white';
-    ctx.stroke();
-
-
-  ctx.beginPath();
-    ctx.moveTo(30, 50); // Top of the triangle (centered)
-    ctx.lineTo(20, 70); // Bottom-left corner of the triangle
-    ctx.lineTo(40, 70); // Bottom-right corner of the triangle
-    ctx.closePath();
-    ctx.fillStyle = baseColor; // Same color as the circle
-    ctx.fill();
-
-
-//    // Draw pointer
-//    ctx.beginPath();
-//    ctx.moveTo(30, 50); // Bottom of the circle
-//    ctx.lineTo(20, 70); // Left point of the triangle
-//    ctx.lineTo(40, 70); // Right point of the triangle
-//    ctx.closePath();
-//    ctx.fillStyle = baseColor; // Same color as the circle
-//    ctx.fill();
-
-    // Draw sequence number in the circle
-    ctx.font = 'bold 18px Arial';
-    ctx.fillStyle = 'white';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(seq.toString(), 30, 30);
-
-        return canvas.toDataURL(); // Convert to Base64 image URL
+    if (this.isListUiVisible()) {
+      this.initListSortable()
     }
+  }
 
+  isListUiVisible = () =>
+    this.state.isList ||
+    (this.state.isMap && this.state.isSplitView && this.state.isFullScreen)
 
-
-      createMarkerIcon = (text, tripId, color, type) => {
-
-
-      if(type === 'toplan')
+  resetRouteMapState = () => {
+    this.setState(
       {
-       return {
-                 path: window.google.maps.SymbolPath.CIRCLE,
-                 fillColor: '#808080', // Gray for non-assigned
-                 fillOpacity: 1,
-                 strokeColor: '#000000',
-                 strokeWeight: 2,
-                 scale: 15,
-               }
+        stagedAddDocs: [],
+        stagedRemoveDocs: [],
+        pendingDoc: null,
+        pendingMarker: null,
+        pendingRemoveDoc: null,
+        pendingDropPoint: null,
+        pendingSameCoordDocs: [],
+        multiDragConfirmShow: false,
+        addConfirmShow: false,
+        warningflg: false,
+        removeConfirmShow: false,
+        isTripPanelOpen: false,
+        reorderedGeoData: null
+      },
+      () => {
+        this.updateMarkers()
+        this.updateTripPolyline()
+        if (this.isListUiVisible()) {
+          this.initListSortable()
+        }
       }
-      else {
+    )
+  }
+
+  applyListReorderFromDom = () => {
+
+    if (this.isTripLocked()) {
+      $('#diagnosis_list tbody').sortable('cancel');
+      return;
+    }
+
+    const rows = $('#diagnosis_list tbody tr');
+
+    const current =
+      this.state.reorderedGeoData
+        ? [...this.state.reorderedGeoData]
+        : [...(this.props.geoData || [])];
+
+    const mapByDoc = new Map(
+      current.map(d => [String(d.docnum), d])
+    );
+
+    const newOrder = [];
+
+    rows.each(function () {
+      const doc = $(this).find('td.docnum a').text().trim();
+      if (mapByDoc.has(doc)) {
+        newOrder.push(mapByDoc.get(doc));
+      }
+    });
+
+    // safety fallback
+    if (newOrder.length !== current.length) {
+      return;
+    }
+
+    // 🔴 re-sequence (only for planned docs)
+    const reordered = newOrder.map((d, i) => ({
+      ...d,
+      seq: d.seq > 0 ? i + 1 : d.seq
+    }));
+
+    // update the reordered list in parent trips state
+    this.props.updatereordersDocsInTrip(reordered)
+
+    this.setState(
+      { reorderedGeoData: reordered },
+      () => {
+        this.updateMarkers();
+        this.updateTripPolyline();
+      }
+    );
+  };
+
+
+  initListSortable = () => {
+
+    const $tbody = $('#diagnosis_list tbody');
+
+    if (!$tbody.length) return;
+
+    if ($tbody.hasClass('ui-sortable')) {
+      $tbody.sortable('destroy');
+    }
+
+    $tbody.sortable({
+      items: '> tr',
+      helper: 'clone',
+
+      stop: () => {
+        this.applyListReorderFromDom();
+      }
+    });
+
+  };
+
+
+  componentDidUpdate(prevProps, prevState) {
+
+
+    if (
+      (prevState.isFullScreen !== this.state.isFullScreen ||
+        prevState.isSplitView !== this.state.isSplitView) &&
+      this.state.isMap
+    ) {
+      setTimeout(() => {
+        if (!this.map) {
+          this.initMapOnce()
+          this.initDirectionsOnce()
+          this.updateMarkers()
+          this.updateTripPolyline()
+        } else {
+          window.google.maps.event.trigger(this.map, 'resize')
+        }
+        if (this.isListUiVisible()) {
+          this.initListSortable()
+        }
+      }, 300)
+    }
+
+    //
+    // 🔥 TRIP UNSELECTED → RESET ROUTE MAP STATE
+    if (
+      prevProps.selectedIndex !== this.props.selectedIndex &&
+      (this.props.selectedIndex === null ||
+        this.props.selectedIndex === undefined ||
+        this.props.selectedIndex === -1)
+    ) {
+      this.resetRouteMapState()
+
+      // optional: clear route line explicitly
+      if (this.directionsRenderer) {
+        this.directionsRenderer.setDirections({ routes: [] })
+      }
+
+      return
+    }
+
+    // 🔁 SWITCHED FROM ONE TRIP TO ANOTHER
+    if (
+      prevProps.selectedIndex !== this.props.selectedIndex &&
+      prevProps.selectedIndex !== null &&
+      this.props.selectedIndex !== null
+    ) {
+      this.resetRouteMapState()
+      return
+    }
+
+
+
+
+    if (prevProps.markers !== this.props.markers) {
+      this.updateMarkers()
+    }
+
+    if (prevProps.geoData !== this.props.geoData) {
+      this.createSiteMarkers();
+      this.updateTripPolyline()
+      if (this.isListUiVisible()) this.initListSortable()
+    }
+
+    if (prevProps.selectedTrips !== this.props.selectedTrips) {
+      this.createSiteMarkers();
+      this.updateTripPolyline();
+      if (this.isListUiVisible()) this.initListSortable()
+    }
+
+    if (!prevState.isMap && this.state.isMap) {
+      this.initMapOnce()
+      this.initDirectionsOnce()
+      this.updateMarkers()
+      this.updateTripPolyline()
+    }
+
+    const wasListVisible =
+      prevState.isList ||
+      (prevState.isMap && prevState.isSplitView && prevState.isFullScreen)
+
+    const isListVisible = this.isListUiVisible()
+
+    // when list UI becomes visible (List tab or Split fullscreen list)
+    if (!wasListVisible && isListVisible) {
+      this.initListSortable();
+    }
+  }
+
+  toggleTripPanel = () => {
+    this.setState(prev => ({
+      isTripPanelOpen: !prev.isTripPanelOpen
+    }))
+  }
+
+
+  getEffectiveTripDocs = () => {
+    // const baseDocs = compactArray(this.props.geoData || [])
+    const baseDocs = compactArray(
+      this.state.reorderedGeoData || this.props.geoData || []
+    )
+      .filter(d => d.seq > 0 && d.lat && d.lng)
+
+
+    const removedDocNums = new Set(
+      this.state.stagedRemoveDocs.map(d => d.docnum)
+    )
+
+    const filtered = baseDocs.filter(
+      d => !removedDocNums.has(d.docnum)
+    )
+
+
+    // 🟡 staged additions (no seq change)
+    const stagedAdds = this.state.stagedAddDocs.map(d => ({
+      ...d,
+      __stagedAdd: true,
+    }))
+
+    return [...filtered, ...stagedAdds]
+  }
+
+
+
+  toggleMapFullscreen = () => {
+    this.setState(
+      (prev) => ({ isMapFullscreen: !prev.isMapFullscreen }),
+      () => {
+        // force Google map to resize correctly
+        setTimeout(() => {
+          if (this.map) {
+            window.google.maps.event.trigger(this.map, 'resize')
+          }
+        }, 200)
+      }
+    )
+  }
+
+
+  displayRouteTag = (drop, lang) => {
+    const myStr = drop.routeColor || ''
+    const subStr = myStr.match('background-color:(.*)')
+    const s = (subStr && subStr[1]) || '#ccc'
+    if (lang === 'eng') {
+      return (
+        <h6>
+          <span style={{ backgroundColor: s }}>{drop.routeTag}</span>
+        </h6>
+      )
+    }
+    return (
+      <h6>
+        <span style={{ backgroundColor: s }}>{drop.routeTagFRA}</span>
+      </h6>
+    )
+  }
+
+  displayRouteTypeDocBadge = (typDoc, pDropPairedDoc) => {
+    const RouteMvt = typDoc
+    const dropPairedDoc = pDropPairedDoc || ''
+    if (RouteMvt === 'PICK') {
+      return (
+        <h5>
+          <td width="3%">
+            <span class="badge badge-primary text-uppercase">
+              {this.props.t('PICK')}
+            </span>
+          </td>
+        </h5>
+      )
+    }
+    if (RouteMvt === 'DLV') {
+      if ((dropPairedDoc || '').length > 1) {
+        return (
+          <h5>
+            <td width="3%">
+              <span class='badge badge-info style="font-size:2rem'>
+                {this.props.t('DLVEXCHANGE')}
+              </span>
+            </td>
+          </h5>
+        )
+      }
+      return (
+        <h5>
+          <td width="3%">
+            <span class='badge badge-success style="font-size:2rem'>
+              {this.props.t('DLV')}
+            </span>
+          </td>
+        </h5>
+      )
+    }
+    if (RouteMvt === 'PRECEIPT') {
+      return (
+        <h5>
+          <td width="3%">
+            <span class="badge badge-danger text-uppercase">
+              {this.props.t('PRECEIPT')}
+            </span>
+          </td>
+        </h5>
+      )
+    }
+    if (RouteMvt === 'RETURN') {
+      return (
+        <h5>
+          <td width="3%">
+            <span class="badge badge-danger text-uppercase">
+              {this.props.t('RETURN')}
+            </span>
+          </td>
+        </h5>
+      )
+    }
+    return null
+  }
+
+
+  componentWillUnmount() {
+    document.removeEventListener('fullscreenchange', this.handleFS)
+    this.stopSplitResize()
+    document.removeEventListener('mousemove', this.onSplitResizeMove)
+    document.removeEventListener('mouseup', this.stopSplitResize)
+    if (this.spiderfier) {
+      this.spiderfier.unspiderfy()
+      this.spiderfier.clearMarkers()
+      this.spiderfier = null
+    }
+  }
+
+  // ===================== MAP INIT =====================
+  initMapOnce = () => {
+    if (this.map) return
+
+    const el = document.getElementById('google-map')
+    if (!el || el.offsetWidth === 0 || el.offsetHeight === 0) {
+      console.warn("Map container not visible yet");
+      return;
+    }
+
+    this.map = new window.google.maps.Map(el, {
+      zoom: 10,
+      center: { lat: 10.6387, lng: -61.3859 },
+      fullscreenControl: false,
+      streetViewControl: false,
+      mapTypeControl: false,
+    })
+
+    this.initSpiderfierOnce()
+    this.ensureSpiderfierLoaded()
+  }
+
+  ensureSpiderfierLoaded = () => {
+    if (window.OverlappingMarkerSpiderfier || this.isSpiderfierLoading) return
+
+    const existing = document.getElementById('oms-script')
+    if (existing) {
+      this.isSpiderfierLoading = true
+      existing.addEventListener('load', () => {
+        this.isSpiderfierLoading = false
+        this.initSpiderfierOnce()
+        this.updateMarkers()
+      })
+      return
+    }
+
+    this.isSpiderfierLoading = true
+    const script = document.createElement('script')
+    script.id = 'oms-script'
+    script.src = '/assets/dist/js/oms.min.js'
+    script.async = true
+
+    script.onload = () => {
+      this.isSpiderfierLoading = false
+      this.initSpiderfierOnce()
+      this.updateMarkers()
+    }
+
+    script.onerror = () => {
+      this.isSpiderfierLoading = false
+      console.warn('Failed to load local Spiderfier script')
+    }
+
+    document.body.appendChild(script)
+  }
+
+  initSpiderfierOnce = () => {
+    if (this.spiderfier || !this.map || !window.OverlappingMarkerSpiderfier) return
+
+    this.spiderfier = new window.OverlappingMarkerSpiderfier(this.map, {
+      markersWontMove: false,
+      markersWontHide: true,
+      keepSpiderfied: true,
+      nearbyDistance: 20,
+        circleFootSeparation: 80,      
+      basicFormatEvents: true,
+    })
+
+    this.spiderfier.addListener('spiderfy', () => {
+      if (this.infoWindow) this.infoWindow.close()
+    })
+  }
+
+  initDirectionsOnce = () => {
+    if (this.directionsRenderer) return
+
+    this.directionsService = new window.google.maps.DirectionsService()
+    this.directionsRenderer = new window.google.maps.DirectionsRenderer({
+      suppressMarkers: true,
+      polylineOptions: {
+        strokeColor: '#2563eb',
+        strokeOpacity: 0.85,
+        strokeWeight: 4,
+      },
+    })
+
+    this.directionsRenderer.setMap(this.map)
+  }
+
+  // ===================== MARKERS =====================
+  createMarkerIcon = (label, color, type) => {
+    if (type === 'toplan') {
+      return {
+        path: window.google.maps.SymbolPath.CIRCLE,
+        fillColor: '#808080',
+        fillOpacity: 1,
+        strokeColor: '#000',
+        strokeWeight: 2,
+        scale: 15,
+      }
+    }
+    return {
+      path: window.google.maps.SymbolPath.CIRCLE,
+      fillColor: color || '#2563eb',
+      fillOpacity: 1,
+      strokeColor: '#000',
+      strokeWeight: 2,
+      scale: 15,
+    }
+  }
+
+
+
+  getMarkerIcon = ({ type }) => {
+    switch (type) {
+      case 'ADD': // staged add
         return {
           path: window.google.maps.SymbolPath.CIRCLE,
-          fillColor: color ? color : '#808080', // Gray for non-assigned
+          scale: 26,
+          fillColor: '#f59e0b',
           fillOpacity: 1,
-          strokeColor: '#000000',
+          strokeColor: '#92400e',
+          strokeWeight: 3,
+        }
+
+      case 'REMOVE': // staged remove
+        return {
+          path: window.google.maps.SymbolPath.CIRCLE,
+          scale: 26,
+          fillColor: '#dc2626',
+          fillOpacity: 1,
+          strokeColor: '#7f1d1d',
+          strokeWeight: 3,
+        }
+
+      case 'TOPLAN':
+        return {
+          path: window.google.maps.SymbolPath.CIRCLE,
+          scale: 22,
+          fillColor: '#9ca3af',
+          fillOpacity: 0.85,
+          strokeColor: '#374151',
           strokeWeight: 2,
-          scale: 15,
         }
+
+      default: // PLANNED
+        return {
+          path: window.google.maps.SymbolPath.CIRCLE,
+          scale: 24,
+          fillColor: '#2563eb',
+          fillOpacity: 1,
+          strokeColor: '#1e3a8a',
+          strokeWeight: 3,
         }
+    }
+  }
+
+  normalizeApostrophes = (text) => {
+    return text.replace(/'+/g, "'");
+  }
+
+  showRowHoverPopup = (doc) => {
+    if (!this.map || !this.infoWindow || !doc?.docnum) return
+
+    const marker = this.markersByDoc[String(doc.docnum)]
+    if (!marker || typeof marker.__getPopupContent !== 'function') return
+
+    this.isRowHoverPopupActive = true
+    this.infoWindow.setContent(marker.__getPopupContent())
+    this.infoWindow.open(this.map, marker)
+
+    window.google.maps.event.addListenerOnce(this.infoWindow, 'domready', () => {
+      const btn = document.getElementById(`remove-${doc.docnum}`)
+      if (btn) {
+        btn.onclick = () => this.askRemoveConfirm(doc)
+      }
+    })
+  }
+
+  hideRowHoverPopup = () => {
+    if (!this.infoWindow || !this.isRowHoverPopupActive) return
+    this.isRowHoverPopupActive = false
+    this.infoWindow.close()
+  }
+
+
+  renderListView = () => {
+    return (
+      <Row className="mt-0" style={{ height: '100%' }}>
+        <Col md="12">
+          {/* 🔁 paste your EXISTING table JSX here */}
+          <div
+            style={{
+              height:
+                this.state.isSplitView && this.state.isFullScreen
+                  ? '100%'
+                  : '410px',
+              overflowY: 'auto',
+              // overflowX: 'hidden',
+            }}
+          >
+            <Table
+              id="diagnosis_list"
+              size="sm"
+              striped
+              hover
+              // responsive
+              style={{ marginBottom: 0 }}
+            >
+              <thead
+                style={{
+                  position: 'sticky',
+                  top: 0,
+
+                  background: '#f8f9fa',
+                  zIndex: 1,
+                }}
+              >
+                <tr>
+                  <th width="6%"></th>
+
+                  {/* <th></th> */}
+                  <th width="6%" class="pl-2">
+                    {this.props.t('Seq')} #
+                  </th>
+                  {/* <th width="6%">{this.props.t('Vehicle')}</th> */}
+                  <th width="6%">Transaction</th>
+                  <th width="6%">Customer</th>
+                  <th width="16%">{this.props.t('Name')}</th>
+                  <th width="6%">Address</th>
+                  <th width="6%">City</th>
+                  <th width="6%">{this.props.t('Pallets')}</th>
+                  <th width="6%">{this.props.t('Cases')}</th>
+                  <th width="6%">{this.props.t('Weight')}</th>
+                  <th width="6%">{this.props.t('Volume')}</th>
+                  <th width="6%">{this.props.t('Arrival')}</th>
+                  <th width="6%">{this.props.t('Departure')}</th>
+                  <th width="6%">Service Time</th>
+                  <th width="6%">{this.props.t('WaitingTime')}</th>
+                  <th width="6%">Priority</th>
+
+
+                </tr>
+              </thead>
+
+              <tbody >
+                {(this.state.reorderedGeoData || this.props.geoData || []).map((row, idx) => (
+                  <tr
+                    key={row.docnum || idx}
+                    onMouseEnter={() => this.showRowHoverPopup(row)}
+                    onMouseLeave={this.hideRowHoverPopup}
+                    style={{
+                      background:
+                        row.seq > 0 ? '#eef6ff' : 'transparent', // planned highlight
+                      fontSize: '12px',
+
+                    }}
+                  >
+                    {/*
+                                      <td>
+                                        <PopupState variant="popover" popupId="demo-popup-menu">
+                                          {(popupState) => (
+                                            <React.Fragment>
+                                              <IconButton size="small">
+                                                <MoreVertIcon
+                                                  variant="contained"
+                                                  {...bindTrigger(popupState)}
+                                                />
+                                              </IconButton>
+                                              <Menu
+                                                {...bindMenu(popupState)}
+                                                anchorOrigin={{
+                                                  vertical: 'bottom',
+                                                  horizontal: 'right',
+                                                }}
+                                                transformOrigin={{
+                                                  vertical: 'top',
+                                                  horizontal: 'left',
+                                                }}
+                                              >
+                                                <MenuItem
+                                                  onClick={() =>
+                                                    this.displayDocumentMessage(
+                                                      row.docnum,
+                                                      row.noteMessage
+                                                    )
+                                                  }
+                                                >
+                                                  Document Instructions
+                                                </MenuItem>
+                                                {row.doctype === 'DLV' ? (
+                                                  <MenuItem
+                                                    onClick={() =>
+                                                      this.displayCarrierMessage(
+                                                        row.docnum,
+                                                        row.CarrierMessage,
+                                                        'carrier'
+                                                      )
+                                                    }
+                                                  >
+                                                    Carrier Instructions
+                                                  </MenuItem>
+                                                ) : null}
+                                                {row.doctype === 'DLV' ||
+                                                  row.doctype === 'PICK' ? (
+                                                  <MenuItem
+                                                    onClick={() =>
+                                                      this.displayCarrierMessage(
+                                                        row.docnum,
+                                                        row.loaderMessage,
+                                                        'loader'
+                                                      )
+                                                    }
+                                                  >
+                                                    Loader Instructions
+                                                  </MenuItem>
+                                                ) : null}
+                                              </Menu>
+                                            </React.Fragment>
+                                          )}
+                                        </PopupState>
+                                      </td>
+                                       */}
+                    {/* <td>
+                                            <Input type="checkbox" />
+                                          </td> */}
+
+                    <td>  {this.isTripLocked() ? ('') : (
+                      <button class="btn btn-danger btn-sm rounded-0" type="button" data-toggle="tooltip" data-placement="top" title="Delete"
+                        onClick={() => this.onConfirmDeleteClick(idx, row.docnum, row.vehicleCode, row)} disabled={this.isTripLocked()}>
+                        <i class="fa fa-trash"></i>
+                      </button>)}</td>
+                    <td>{this.displayBadge(row.doctype, idx)}</td>
+
+
+                    {/* <td>{row.tripcode || '-'}</td> */}
+                    <td
+                      width="6%"
+                      name="docNum"
+                      class="docnum"
+                      style={{
+                        fontWeight: 'bold',
+                        textDecorationLine: 'underline',
+                      }}
+                    >
+                      <a
+                        href="#"
+                        onClick={() =>
+                          this.onDocClick(
+                            row.products,
+                            row.docnum,
+                            row.doctype
+                          )
+                        }
+                      >
+                        {row.docnum}
+                      </a>
+                    </td>
+                    <td>{row.bpcode}</td>
+
+                    <td>{this.normalizeApostrophes(row.bpname)}</td>
+                    <td>{row.addlig1} </td>
+
+                    <td>
+                      {this.normalizeApostrophes(row.city)}
+                    </td>
+
+                    <td>
+                      {(parseFloat(row.noofCases)).toFixed(2)} PAL
+                    </td>
+
+                    <td width="6%">
+                      {row?.mainCases ? parseFloat(row.mainCases) : 0} CS
+                    </td>
+
+                    <td>
+                      {row.netweight} {row.weightunit}
+                    </td>
+
+                    <td>
+                      {row.volume} {row.volume_unit}
+                    </td>
+                    <td width="6%">{row.arrival && row.arrival}</td>
+                    <td width="6%">{row.end && row.end}</td>
+                    <td width="6%">{formatTime(convertHrToSec(row.serviceTime))}</td>
+                    <td width="6%">{formatTime(convertHrToSec(row.waitingTime))}</td>
+
+                    <td>{this.displayPriority(row)}</td>
+
+                  </tr>
+                ))}
+              </tbody>
+            </Table>
+          </div>
+        </Col>
+      </Row>
+    )
+  }
+
+  onConfirmDeleteClick = (index, docnum, vehicleCode, data) => {
+    this.setState({
+      addConfirmDeleteShow: true,
+      confirmMessage: 'Are you sure you want to Delete?',
+      index: index,
+      docnum: docnum,
+      vehicleCode: vehicleCode
+    })
+  }
+
+  onConfirmDeleteNo = () => {
+    this.setState({
+      addConfirmDeleteShow: false
+    })
+  }
+
+
+  onConfirmDeleteYes = (index, docnum) => {
+    let type;
+    if (this.state.confirmMessage.includes("Delete")) {
+      type = "Delete";
+      this.props.onTripDelete(index, docnum, type, this.state.vehicleCode);
+    } else {
+      this.props.onTripDelete(index, docnum);
+    }
+
+    this.setState({
+      addConfirmDeleteShow: false
+    })
+  }
+
+
+  attachInfoWindow = (marker, html) => {
+    const info = new window.google.maps.InfoWindow({
+      content: html,
+    });
+
+    marker.addListener('click', () => {
+      info.open(this.map, marker);
+    });
+  };
+
+//   updateMarkers = () => {
+//     if (!this.map) return
+
+//     const SITE_ICON = '/assets/img/address.png';
+
+//     const stagedAddIds = new Set(
+//       this.state.stagedAddDocs.map(d => d.docnum)
+//     )
+
+//     // ---------- CLEAN OLD MARKERS ----------
+//     Object.values(this.markersByDoc).forEach(m => m.setMap(null))
+//     this.markersByDoc = {}
+
+//     const allDocs = compactArray(this.props.markers || [])
+
+//     // ---------- SPLIT DOCS ----------
+//     // const plannedDocs = allDocs.filter(d => d.seq > 0)
+
+//     const plannedDocs = this.getEffectiveTripDocs()
+
+
+//     // const toPlanDocs  = allDocs.filter(d => !d.seq || d.seq === 0)
+
+//     const plannedDocIds = new Set(
+//       plannedDocs.map(d => d.docnum)
+//     )
+
+//     const toPlanDocs = allDocs.filter(
+//       d =>
+//         (!d.seq || d.seq === 0) &&
+//         !plannedDocIds.has(d.docnum)
+//     )
+
+
+
+//     let finalDocs = [...plannedDocs]
+
+//     if (this.state.showToPlanDocs) {
+//       finalDocs = finalDocs.concat(toPlanDocs)
+//     }
+
+//     // ---------- INFO WINDOW (SINGLE INSTANCE) ----------
+//     if (!this.infoWindow) {
+//       this.infoWindow = new window.google.maps.InfoWindow()
+//     }
+
+//     // ---------- CREATE DOC MARKERS ----------
+//     finalDocs.forEach(doc => {
+//       if (!doc.lat || !doc.lng || !doc.docnum) return
+
+//       //const isToPlan = !doc.seq || doc.seq === 0
+
+//       const isToPlan = !doc.seq || doc.seq === 0
+//       const isStagedAdd = stagedAddIds.has(doc.docnum)
+//       const stagedRemoveIds = new Set(this.state.stagedRemoveDocs)
+
+//       const isStagedRemove = stagedRemoveIds.has(doc.docnum)
+
+//       const markerType =
+//         isStagedAdd
+//           ? 'ADD'
+//           : isStagedRemove
+//             ? 'REMOVE'
+//             : isToPlan
+//               ? 'TOPLAN'
+//               : 'PLANNED'
+
+//       const labelText =
+//         isStagedAdd ? 'P' :
+//           isStagedRemove ? 'D' :
+//             isToPlan ? '0' :
+//               String(doc.seq)
+
+//       const marker = new window.google.maps.Marker({
+//         map: this.map,
+//         position: { lat: doc.lat, lng: doc.lng },
+//         draggable: isToPlan && !this.isTripLocked(),
+//         icon: this.getMarkerIcon({ type: markerType }),
+//         label: {
+//           text: labelText,
+//           color: '#fff',
+//           fontSize: '13px',
+//           fontWeight: 'bold',
+//         },
+//         zIndex:
+//           isStagedAdd || isStagedRemove
+//             ? 999
+//             : isToPlan
+//               ? 300
+//               : 600,
+//       })
+
+//       // -------- DRAGGED LISTENER-----------
+
+//       marker.addListener('dragstart', () => {
+//         marker.__originalPosition = marker.getPosition()
+//       })
+
+//       marker.addListener('dragend', (e) => {
+//         this.handleToPlanDrop(doc, e.latLng, marker)
+//       })
+
+//       const canRemove = doc.seq > 0 && !isStagedAdd && !this.isTripLocked()
+
+//       // ---------- CLICK INFO ----------
+//       marker.addListener('click', () => {
+//         this.infoWindow.setContent(`
+//         <div style="min-width:220px">
+//           <b>${doc.bpname || 'Customer'}</b><br/>
+//           <b>Doc:</b> ${doc.docnum}<br/>
+//           <b>City:</b> ${doc.city || '-'}<br/>
+//            ${(parseInt(doc.mainCases)) || 0} CS  <b>|| </b> ${(parseFloat(doc.noofCases).toFixed(2)) || 0} PAL  <br/>
+//         <b>Status:</b> 
+
+//           <span class="badge ${isStagedAdd
+//             ? 'badge-warning'
+//             : isToPlan
+//               ? 'badge-secondary'
+//               : 'badge-success'
+//           }">
+//   ${isStagedAdd ? 'Pending Add' : isToPlan ? 'To Plan' : 'Planned'}
+// </span>
+//           ${canRemove
+//             ? `<br/><button id="remove-${doc.docnum}" style="margin-top:10px;color:white">
+//                        Remove from Trip
+//                      </button>`
+//             : ''
+//           }
+//         </div>
+//       `)
+//         this.infoWindow.open(this.map, marker)
+
+//         this.infoWindow.open(this.map, marker)
+
+//         // ✅ MUST be here
+//         window.google.maps.event.addListenerOnce(
+//           this.infoWindow,
+//           'domready',
+//           () => {
+//             const btn = document.getElementById(`remove-${doc.docnum}`)
+//             if (btn) {
+//               btn.onclick = () => this.askRemoveConfirm(doc)
+//             }
+//           }
+//         )
+//       })
+
+//       this.markersByDoc[doc.docnum] = marker
+//     })
+
+
+
+
+
+//     // ---------- START / END SITES ----------
+//     // ---------- START / END SITES ----------
+//     const trip = this.props.selectedTrips?.[0]
+//     const sites = this.props.sites || []
+
+//     // remove old site markers
+//     if (this.startSiteMarker) {
+//       this.startSiteMarker.setMap(null)
+//       this.startSiteMarker = null
+//     }
+//     if (this.endSiteMarker) {
+//       this.endSiteMarker.setMap(null)
+//       this.endSiteMarker = null
+//     }
+
+//     if (trip) {
+//       const depSite = sites.find(s => String(s.id) === String(trip.depSite))
+//       const arrSite = sites.find(s => String(s.id) === String(trip.arrSite))
+
+//       const sameSite =
+//         depSite &&
+//         arrSite &&
+//         Number(depSite.lat) === Number(arrSite.lat) &&
+//         Number(depSite.lng) === Number(arrSite.lng)
+
+//       // ===== SAME START & END =====
+//       if (depSite && sameSite) {
+//         this.startSiteMarker = new window.google.maps.Marker({
+//           map: this.map,
+//           position: {
+//             lat: Number(depSite.lat),
+//             lng: Number(depSite.lng),
+//           },
+//           title: 'Warehouse (Start & End)',
+//           icon: {
+//             url: SITE_ICON,
+//             scaledSize: new window.google.maps.Size(40, 40), // 🔥 adjust size here
+//             anchor: new window.google.maps.Point(20, 40),
+//           },
+//         })
+//       } else {
+//         // ===== START SITE =====
+//         if (depSite && depSite.lat && depSite.lng) {
+//           this.startSiteMarker = new window.google.maps.Marker({
+//             map: this.map,
+//             position: {
+//               lat: Number(depSite.lat),
+//               lng: Number(depSite.lng),
+//             },
+//             title: 'Start Warehouse',
+//             icon: {
+//               url: SITE_ICON,
+//               scaledSize: new window.google.maps.Size(40, 40),
+//               anchor: new window.google.maps.Point(20, 40),
+//             },
+//           })
+//         }
+
+//         // ===== END SITE =====
+//         if (arrSite && arrSite.lat && arrSite.lng) {
+//           this.endSiteMarker = new window.google.maps.Marker({
+//             map: this.map,
+//             position: {
+//               lat: Number(arrSite.lat),
+//               lng: Number(arrSite.lng),
+//             },
+//             title: 'End Warehouse',
+//             icon: {
+//               url: SITE_ICON,
+//               scaledSize: new window.google.maps.Size(40, 40),
+//               anchor: new window.google.maps.Point(20, 40),
+//             },
+//           })
+//         }
+//       }
+//     }
+
+
+//   }
+
+updateMarkers = () => {
+  if (!this.map) return
+  this.initSpiderfierOnce()
+
+  const SITE_ICON = '/assets/img/address.png';
+
+  const stagedAddIds = new Set(
+    this.state.stagedAddDocs.map(d => d.docnum)
+  )
+
+  if (this.spiderfier) {
+    this.spiderfier.unspiderfy()
+    this.spiderfier.clearMarkers()
+  }
+  Object.values(this.markersByDoc).forEach(m => m.setMap(null))
+  this.markersByDoc = {}
+
+  const allDocs = compactArray(this.props.markers || [])
+
+  const plannedDocs = this.getEffectiveTripDocs()
+
+  const plannedDocIds = new Set(
+    plannedDocs.map(d => d.docnum)
+  )
+
+  const toPlanDocs = allDocs.filter(
+    d =>
+      (!d.seq || d.seq === 0) &&
+      !plannedDocIds.has(d.docnum)
+  )
+
+  let finalDocs = [...plannedDocs]
+
+  if (this.state.showToPlanDocs) {
+    finalDocs = finalDocs.concat(toPlanDocs)
+  }
+
+  if (!this.infoWindow) {
+    this.infoWindow = new window.google.maps.InfoWindow()
+  }
+
+  finalDocs.forEach(doc => {
+    if (!doc.lat || !doc.lng || !doc.docnum) return
+
+    const isToPlan = !doc.seq || doc.seq === 0
+    const isStagedAdd = stagedAddIds.has(doc.docnum)
+    const stagedRemoveIds = new Set(this.state.stagedRemoveDocs)
+    const isStagedRemove = stagedRemoveIds.has(doc.docnum)
+
+    const markerType =
+      isStagedAdd
+        ? 'ADD'
+        : isStagedRemove
+          ? 'REMOVE'
+          : isToPlan
+            ? 'TOPLAN'
+            : 'PLANNED'
+
+    const labelText =
+      isStagedAdd ? 'P' :
+        isStagedRemove ? 'D' :
+          isToPlan ? '0' :
+            String(doc.seq)
+
+    const marker = new window.google.maps.Marker({
+      map: this.map,
+      position: { lat: doc.lat, lng: doc.lng },
+      draggable: isToPlan && !this.isTripLocked(),
+      icon: this.getMarkerIcon({ type: markerType }),
+      label: {
+        text: labelText,
+        color: '#fff',
+        fontSize: '13px',
+        fontWeight: 'bold',
+      },
+      zIndex:
+        isStagedAdd || isStagedRemove
+          ? 999
+          : isToPlan
+            ? 300
+            : 600,
+    })
+
+    marker.addListener('dragstart', () => {
+      if (this.spiderfier) this.spiderfier.unspiderfy()
+      marker.__originalPosition = marker.getPosition()
+    })
+
+    marker.addListener('dragend', (e) => {
+      this.handleToPlanDrop(doc, e.latLng, marker)
+    })
+
+    const canRemove = doc.seq > 0 && !isStagedAdd && !this.isTripLocked()
+
+    // ⭐ track if popup was clicked
+    let isClicked = false
+
+    const getPopupContent = () => `
+      <div style="min-width:220px">
+        <b>${doc.bpname || 'Customer'}</b><br/>
+        <b>Doc:</b> ${doc.docnum}<br/>
+        <b>City:</b> ${doc.city || '-'}<br/>
+        ${(parseInt(doc.mainCases)) || 0} CS  <b>||</b> ${(parseFloat(doc.noofCases).toFixed(2)) || 0} PAL<br/>
+        <b>Status:</b> 
+        <span class="badge ${
+          isStagedAdd
+            ? 'badge-warning'
+            : isToPlan
+              ? 'badge-secondary'
+              : 'badge-success'
+        }">
+          ${isStagedAdd ? 'Pending Add' : isToPlan ? 'To Plan' : 'Planned'}
+        </span>
+        ${
+          canRemove
+            ? `<br/><button id="remove-${doc.docnum}" style="margin-top:10px;color:white">
+                 Remove from Trip
+               </button>`
+            : ''
+        }
+      </div>
+    `
+    marker.__getPopupContent = getPopupContent
+
+    // ---------- HOVER ----------
+    marker.addListener('mouseover', () => {
+
+      if (isClicked) return
+
+      this.infoWindow.setContent(getPopupContent())
+      this.infoWindow.open(this.map, marker)
+    })
+
+    // ---------- HOVER OUT ----------
+    marker.addListener('mouseout', () => {
+
+      if (!isClicked) {
+        this.infoWindow.close()
+      }
+    })
+
+    // ---------- CLICK ----------
+    const onMarkerClick = () => {
+
+      isClicked = true
+
+      this.infoWindow.setContent(getPopupContent())
+      this.infoWindow.open(this.map, marker)
+
+      window.google.maps.event.addListenerOnce(
+        this.infoWindow,
+        'domready',
+        () => {
+
+          const btn = document.getElementById(`remove-${doc.docnum}`)
+          if (btn) {
+            btn.onclick = () => this.askRemoveConfirm(doc)
+          }
+
+          const closeBtn = document.querySelector(".gm-ui-hover-effect")
+          if (closeBtn) {
+            closeBtn.addEventListener("click", () => {
+              isClicked = false
+            })
+          }
+        }
+      )
+    }
+
+    if (this.spiderfier) {
+      marker.addListener('spider_click', onMarkerClick)
+    } else {
+      marker.addListener('click', onMarkerClick)
+    }
+
+    if (this.spiderfier) {
+      this.spiderfier.addMarker(marker)
+    }
+
+    this.markersByDoc[doc.docnum] = marker
+  })
+
+  const trip = this.props.selectedTrips?.[0]
+  const sites = this.props.sites || []
+
+  if (this.startSiteMarker) {
+    this.startSiteMarker.setMap(null)
+    this.startSiteMarker = null
+  }
+  if (this.endSiteMarker) {
+    this.endSiteMarker.setMap(null)
+    this.endSiteMarker = null
+  }
+
+  if (trip) {
+
+    const depSite = sites.find(s => String(s.id) === String(trip.depSite))
+    const arrSite = sites.find(s => String(s.id) === String(trip.arrSite))
+
+    const sameSite =
+      depSite &&
+      arrSite &&
+      Number(depSite.lat) === Number(arrSite.lat) &&
+      Number(depSite.lng) === Number(arrSite.lng)
+
+    if (depSite && sameSite) {
+
+      this.startSiteMarker = new window.google.maps.Marker({
+        map: this.map,
+        position: {
+          lat: Number(depSite.lat),
+          lng: Number(depSite.lng),
+        },
+        title: 'Warehouse (Start & End)',
+        icon: {
+          url: SITE_ICON,
+          scaledSize: new window.google.maps.Size(40, 40),
+          anchor: new window.google.maps.Point(20, 40),
+        },
+      })
+
+    } else {
+
+      if (depSite && depSite.lat && depSite.lng) {
+
+        this.startSiteMarker = new window.google.maps.Marker({
+          map: this.map,
+          position: {
+            lat: Number(depSite.lat),
+            lng: Number(depSite.lng),
+          },
+          title: 'Start Warehouse',
+          icon: {
+            url: SITE_ICON,
+            scaledSize: new window.google.maps.Size(40, 40),
+            anchor: new window.google.maps.Point(20, 40),
+          },
+        })
       }
 
-
-
-      isCloseToMarker = (position1, position2, threshold = 0.001) => {
-          console.log("T222 at isclosetomarket");
-          console.log("T222 at position 1",position1 );
-          console.log("T222 at position2", position2);
-          return (
-            Math.abs(position1.lat - position2.lat) < threshold &&
-            Math.abs(position1.lng - position2.lng) < threshold
-          );
-        };
-
-
-       onMarkerDragEnd = (deliveryId, targetTripId) => {
-
-          console.log("T222 after drag ", deliveryId)
-          console.log("T222 after drag target object ", targetTripId);
-          this.props.ToPlan2TripDocuments(deliveryId, targetTripId);
-//          const { individualDeliveries, trips } = this.state;
-//          const draggedDelivery = individualDeliveries.find((d) => d.id === deliveryId);
-//          if (draggedDelivery) {
-//            const updatedTrips = {
-//              ...trips,
-//              [targetTripId]: {
-//                ...trips[targetTripId],
-//                deliveries: [...trips[targetTripId].deliveries, { ...draggedDelivery, tripId: targetTripId }],
-//              },
-//            };
-//            const updatedIndividualDeliveries = individualDeliveries.filter((d) => d.id !== deliveryId);
-//            this.setState({ trips: updatedTrips, individualDeliveries: updatedIndividualDeliveries });
-//          }
-        };
-
-
-
-    updateMap = () => {
-       // console.log("T222 inside updateMap")
-        document.getElementById('google-map').innerHTML = "";
-          let IsTripSelected = false;
-                let IsDeptAArrSameSite = false;
-                let StartSite = '';
-                 let EndSite = '';
-                 let vehicleColor = '';
-
-        // console.log("T222 Marker at udpateMap");
-        if (this.props.markers !== undefined && this.props.markers.length > 0) {
-            var centerLocation = this.props.markers[0];
-            var mapOptions = {
-                zoom: 10,
-                center: {
-                    lat: centerLocation.lat,
-                    lng: centerLocation.lng
-                }
-            }
-            var markerArray;
-            markerArray = this.props.markers;
-            // console.log("T222 Marker 1 - selected trip ", this.props.selectedTrips)
-            if (this.props.selectedTrips && this.props.selectedTrips[0]) {
-                 IsTripSelected = true;
-                   // get the vehicle color from the list
-           // console.log("Markers inside - selected trip ", this.props.selectedTrips[0])
-                   let myStr = this.props.selectedTrips[0].vehicleObject.color;
-                    let subStr = myStr.match("background-color:(.*)");
-                           vehicleColor = subStr[1];
-                if (this.props.selectedTrips[0].depSite) {
-                    let depatureSite = {};
-
-
-
-                    if (this.props.sites && this.props.sites.length > 0) {
-                        this.props.sites.map((site) => {
-                            if (site.id === this.props.selectedTrips[0].depSite) {
-                                depatureSite.city = site.value;
-                                depatureSite.docnum = site.value;
-                                depatureSite.id = site.id;
-                                depatureSite.lat = site.lat;
-                                depatureSite.lng = site.lng;
-                                depatureSite.value = site.value;
-                            }
-                        });
-                        markerArray.shift();
-                        markerArray.unshift(depatureSite);
-                    }
-                }
-
-                if (this.props.selectedTrips[0].arrSite) {
-                    let arrivalSite = {};
-                    this.props.sites.map((site) => {
-                        if (site.id === this.props.selectedTrips[0].arrSite) {
-                            arrivalSite.city = site.value;
-                            arrivalSite.docnum = site.value;
-                            arrivalSite.idd = site.id;
-                            arrivalSite.lat = site.lat;
-                            arrivalSite.lng = site.lng;
-                            arrivalSite.value = site.value;
-                            arrivalSite.arrivalCheck = "arrival";
-                        }
-                    });
-                    markerArray.push(arrivalSite);
-                }
-
-                  if(StartSite === EndSite) {
-                                   IsDeptAArrSameSite = true;
-                                }
-
-            }
-            console.log("T222  Marker Mnutiple selection-----", this.props.IsAllTripsSelected)
-            if(this.props.IsAllTripsSelected)
-            {
-
-                  console.log("T222  Marker Map 1-----")
-                                    var map = new window.google.maps.Map(document.getElementById('google-map'), mapOptions);
-                                   //  var directionsService = new window.google.maps.DirectionsService();
-                                     //   var directionsDisplay = new window.google.maps.DirectionsRenderer({map: map, suppressMarkers: true, polylineOptions: { strokeColor: "#3848ca" } });
-                        //directionsDisplay.setMap(map);
-                                    var DepartureSite = "";
-                                    var SiteCode = "";
-                                    const centerControlDiv = document.createElement("div");
-                                    this.customControl(centerControlDiv, map);
-                                    map.controls[window.google.maps.ControlPosition.TOP_RIGHT].push(centerControlDiv);
-                                    var polylinePath = [];
-                                    let Aflg = '' , Dflg = '';
-                                    let labelIndex = -1;
-                                     const labels = "123456789";
-                                                //   let labelIndex = 0;
-                                    var iconColor = {
-                                      url: 'http://maps.google.com/mapfiles/ms/icons/green.png', // Use your own marker icon URL
-                                      labelOrigin: new window.google.maps.Point(15, 10) // Position the label below the icon
-                                    };
-                                    let markerIndex = -1; // Marker index for numbering
-                                    // console.log("Marker list of all", markerArray);
-                                    markerArray.map((place) => {
-                                        // console.log("Marker inside update place", place);
-                                        var marker = null;
-                                       labelIndex++;
-                                        var label = ''; // Label for marker numbering
-                                         markerIndex++;
-                                         label = markerIndex.toString(); // Set label as marker index
-                                                            // Increment marker index
-                          // console.log("Marker index", markerIndex);
-                                            // console.log("Marker index label", label);
-                        					if (place.id !== undefined || place.idd !== undefined) {
-
-
-
-                                            if(IsDeptAArrSameSite === true) {
-            // console.log("Marker index 1 ", place);
-                                               if(markerIndex === 0) {
-                                               // console.log("Marker index 2 ", place);
-                                                marker = new window.google.maps.Marker({
-                                                                      position: { lat: place.lat, lng: place.lng },
-                                                                       icon: {
-                                                                                                                                                                   url: '/assets/img/address.png'
-                                                                                                                                                               }
-
-                                                                  });
-                                                                  }
-                                               else {
-                                               // console.log("Marker index 3 ", place);
-                                                  DepartureSite = place.id;
-                                                                   SiteCode = place.id;
-                                                                     place.docnum = place.value;
-                                                                   place.city = place.value;
-                                                                   label = 'S,E';
-                                                     marker = new window.google.maps.Marker({
-                                                                           position: { lat: place.lat, lng: place.lng },
-                                                                           title: place.value,
-                                                                          icon: {
-                                                                                                                     url: '/assets/img/address.png'
-                                                                                                                 }
-
-                                                                       });
-
-                                               }
-                                            }
-                                            else {
-
-                                            DepartureSite = place.id;
-                                            SiteCode = place.id;
-                                            place.docnum = place.value;
-                                            place.city = place.value;
-                                            marker = new window.google.maps.Marker({
-                                                position: { lat: place.lat, lng: place.lng },
-                                                title: place.value,
-                                                 //icon={createMarkerIcon(delivery.id.toString(), tripId)}
-
-
-
-                                            });
-                                            }
-                                        } else {
-                                              console.log("Marker inside All select before", place);
-
-                                              if(place.itemCode != undefined)
-                                              {
-
-                                             console.log("Marker inside All select", place);
-                                            let myStr1 = place.VehicleColor;
-                                             let subStr1 = myStr1.match("background-color:(.*)");
-                                                                    let   vehicleColor1 = subStr1[1];
-                                            marker = new window.google.maps.Marker({
-                                                position: { lat: place.lat, lng: place.lng },
-                                                title: place.city,
-                                                label:  {
-                                                color: 'black', // Label color
-                                                                            fontSize: '20px', // Label font size
-                                                                            fontWeight: 'bold',
-                                                text : place.seq.toString(),
-                                                },
-                                                icon : this.createMarkerIcon(place.seq.toString(), place.tripcode, vehicleColor1),
-                                            });
-
-                                              }
-                                              else {
-
-                                                  if (place.panelType && place.panelType === 'pickup') {
-                                                                           marker = new window.google.maps.Marker({
-                                                                                                                                  position: { lat: place.lat, lng: place.lng },
-                                                                                                                                  title: place.city,
-                                                                                                                                  draggable: true,
-                                                                                                                                  label:  {
-                                                                                                                                  color: 'white', // Label color
-                                                                                                                                                              fontSize: '20px', // Label font size
-                                                                                                                                                              fontWeight: 'bold',
-                                                                                                                                  text : "0",
-                                                                                                                                  },
-                                                                                                                                  icon : this.createMarkerIcon("0", place.tripcode, "green", 'toplan'),
-
-                                                                                                                              });
-
-                                                                                              }
-                                                  else if(place.panelType && place.panelType === 'drop') {
-
-
-                                                                                                    marker = new window.google.maps.Marker({
-                                                                                                                                                      position: { lat: place.lat, lng: place.lng },
-                                                                                                                                                      title: place.city,
-                                                                                                                                                      draggable: true,
-                                                                                                                                                      label:  {
-                                                                                                                                                      color: 'black', // Label color
-                                                                                                                                                                                  fontSize: '20px', // Label font size
-                                                                                                                                                                                  fontWeight: 'bold',
-                                                                                                                                                      text : "0",
-                                                                                                                                                      },
-                                                                                                                                                      icon : this.createMarkerIcon("0", place.tripcode, vehicleColor, 'toplan'),
-
-                                                                                                      });
-
-                                                                                                      marker.markerData = {
-                                                                                                        id: place.docnum,
-                                                                                                        city: place.city,
-                                                                                                        tripcode: place.tripcode,
-                                                                                                        initialPosition: { lat: place.lat, lng: place.lng },
-                                                                                                        markerObject : place, // Save original position
-                                                                                                      };
-                                                                                                  }
-                                              }
-
-                                        }
-
-                                        var url = "";
-                                        var content;
-                                        if (place.doctype == 'PRECEIPT') {
-                                            url = {x3Url} + "/$sessions?f=GESXX10CPTH/2//M/" + place.docnum;
-                                            if (place.tripno == 0)
-                                                content = "<div id='content'><div id='siteNotice'></div><div id = 'bodyContent'><a href=" + url + " target='_blank'>" + place.docnum + "</a></br>" + place.bpname + "</br>" + place.poscode + " - " + place.city + "</div></div>";
-                                            else
-                                                content = "<div id='content'><div id='siteNotice'></div><div id = 'bodyContent'><a href=" + url + " target='_blank'>" + place.docnum + "</a></br>" + place.bpname + "</br>" + place.poscode + " - " + place.city + "</br>" + place.tripno + "-" + place.seq + "</br>" + place.vehicleCode +  "</br>" + place.itemCode + "</div></div>";
-
-                                        } else if (place.doctype == 'DLV') {
-                                            url = {x3Url} + "/$sessions?f=GESSDH/2//M/" + place.docnum;
-                                            if (place.tripno == 0)
-                                                content = "<div id='content'><div id='siteNotice'></div><div id = 'bodyContent'><a href=" + url + " target='_blank'>" + place.docnum + "</a></br>" + place.bpname + "</br>" + place.poscode + " - " + place.city + "</div></div>";
-                                            else
-                                                content = "<div id='content'><div id='siteNotice'></div><div id = 'bodyContent'><a href=" + url + " target='_blank'>" + place.docnum + "</a></br>" + place.bpname + "</br>" + place.poscode + " - " + place.city + "</br>" + place.tripno + "-" + place.seq + "</br>" + place.vehicleCode +  "</br>" + place.itemCode + "</div></div>";
-
-                                        } else if (place.doctype == 'PICK') {
-                                            url = {x3Url} + "/$sessions?f=GESPRH2/2//M/" + place.docnum;
-                                            if (place.tripno == 0)
-                                                content = "<div id='content'><div id='siteNotice'></div><div id = 'bodyContent'><a href=" + url + " target='_blank'>" + place.docnum + "</a></br>" + place.bpname + "</br>" + place.poscode + " - " + place.city + "</div></div>";
-                                            else
-                                                content = "<div id='content'><div id='siteNotice'></div><div id = 'bodyContent'><a href=" + url + " target='_blank'>" + place.docnum + "</a></br>" + place.bpname + "</br>" + place.poscode + " - " + place.city + "</br> </br> <b>Vehicle </b>: " + place.vehicleCode +  "</br> <b>TripCode : </b>" + place.itemCode + "</div></div>";
-
-                                        } else {
-                                            url = {x3Url} + "/$sessions?f=GESFCY/2//M/" + place.docnum;
-                                            content = "<div id='content'><div id='siteNotice'></div><div id = 'bodyContent'><a href=" + url + " target='_blank'>" + SiteCode + "," + place.docnum + "</a></br>" + place.city + "</div></div>";
-
-                                        }
-                                        var infowindow = new window.google.maps.InfoWindow({
-                                            content: content
-                                        });
-                                        marker.setMap(map);
-                                        marker.addListener('click', function() {
-                                            infowindow.open(map, marker);
-                                        });
-                                        //  polylinePath.push({ lat: place.lat, lng: place.lng });
-
-
-                                          // add drag end listhner
-                                                                   marker.addListener('dragend', (e) => {
-                                                                    console.log("T222 at dragend event", e);
-                                                                    console.log("T222 at dragend marker", marker);
-                                                                     const newPosition = {
-                                                                       lat: e.latLng.lat(),
-                                                                       lng: e.latLng.lng(),
-                                                                     };
-
-                                                                     // Loop through trips and check proximity to other markers
-                                                                     console.log("T222 at dragable", markerArray)
-                                                                     //for (const [tripId, trip] of Object.entries(markerArray)) {
-                                                                       for (let tripDelivery of markerArray) {
-
-                                                                          let targetposition  = {
-                                                                            lat : tripDelivery.lat,
-                                                                            lng : tripDelivery.lng
-                                                                          };
-                                                                         if (this.isCloseToMarker(newPosition, targetposition)) {
-                                                                           this.onMarkerDragEnd(marker.markerData.markerObject, tripDelivery); // Adjusted to use `place.id`
-                                                                           // marker.setPosition(marker.markerDetails.initialPosition); // Reset to original position
-                                                                           return;
-                                                                         }
-                                                                       }
-                                                                     // Optionally, update the marker's position in the state
-                                                                     //marker.setPosition(newPosition); // Visually update the marker's position
-                                                                   });
-
-
-                                                                   //  polylinePath.push({ lat: place.lat, lng: place.lng });
-                                                               });
-
-
-
-                                   // });
-                            // Code to calculate and display route using DirectionsService
-                          var waypoints = markerArray.map(place => ({
-                              location: { lat: place.lat, lng: place.lng },
-                              stopover: true
-
-                          }));
-
-                          var directionsWaypoints = waypoints.slice(1, -1).map(waypoint => ({
-                              location: waypoint.location,
-                              stopover: true
-                          }));
-
-                          var request = {
-                              origin: waypoints[0].location,
-                              destination: waypoints[waypoints.length - 1].location,
-                              waypoints: directionsWaypoints,
-                              travelMode: 'DRIVING'
-                          };
-
-
-
-
-            }
-            else if(IsTripSelected) {
-
-                         console.log("T222 else if  Marker Map 1-----")
-                        var map = new window.google.maps.Map(document.getElementById('google-map'), mapOptions);
-                       //  var directionsService = new window.google.maps.DirectionsService();
-                         //   var directionsDisplay = new window.google.maps.DirectionsRenderer({map: map, suppressMarkers: true, polylineOptions: { strokeColor: "#3848ca" } });
-            //directionsDisplay.setMap(map);
-                        var DepartureSite = "";
-                        var SiteCode = "";
-                        const centerControlDiv = document.createElement("div");
-                        this.customControl(centerControlDiv, map);
-                        map.controls[window.google.maps.ControlPosition.TOP_RIGHT].push(centerControlDiv);
-                        var polylinePath = [];
-                        let Aflg = '' , Dflg = '';
-                        let labelIndex = -1;
-                         const labels = "123456789";
-                                    //   let labelIndex = 0;
-                        var iconColor = {
-                          url: 'http://maps.google.com/mapfiles/ms/icons/green.png', // Use your own marker icon URL
-                          labelOrigin: new window.google.maps.Point(15, 10) // Position the label below the icon
-                        };
-                        let markerIndex = -1; // Marker index for numbering
-                        // console.log("Marker list of all", markerArray);
-                        markerArray.map((place) => {
-                             console.log("Marker inside update place", place);
-                            var marker = null;
-                           labelIndex++;
-                            var label = ''; // Label for marker numbering
-                             markerIndex++;
-                             label = markerIndex.toString(); // Set label as marker index
-                                                // Increment marker index
-              // console.log("Marker index", markerIndex);
-                                // console.log("Marker index label", label);
-            					if (place.id !== undefined || place.idd !== undefined) {
-
-
-
-                                if(IsDeptAArrSameSite === true) {
-// console.log("Marker index 1 ", place);
-                                   if(markerIndex === 0) {
-                                   // console.log("Marker index 2 ", place);
-                                    marker = new window.google.maps.Marker({
-                                                          position: { lat: place.lat, lng: place.lng },
-                                                           icon: {
-                                                                                                                                                       url: '/assets/img/address.png'
-                                                                                                                                                   }
-
-                                                      });
-                                                      }
-                                   else {
-                                   // console.log("Marker index 3 ", place);
-                                      DepartureSite = place.id;
-                                                       SiteCode = place.id;
-                                                         place.docnum = place.value;
-                                                       place.city = place.value;
-                                                       label = 'S,E';
-                                         marker = new window.google.maps.Marker({
-                                                               position: { lat: place.lat, lng: place.lng },
-                                                               title: place.value,
-                                                              icon: {
-                                                                                                         url: '/assets/img/address.png'
-                                                                                                     }
-
-                                                           });
-
-                                   }
-                                }
-                                else {
-
-                                DepartureSite = place.id;
-                                SiteCode = place.id;
-                                place.docnum = place.value;
-                                place.city = place.value;
-                                marker = new window.google.maps.Marker({
-                                    position: { lat: place.lat, lng: place.lng },
-                                    title: place.value,
-                                     //icon={createMarkerIcon(delivery.id.toString(), tripId)}
-
-
-
-                                });
-                                }
-                            } else {
-
-
-
-
-                                 if(place.itemCode != undefined)
-                            {
-                                // console.log("Marker inside else place", place);
-                                marker = new window.google.maps.Marker({
-                                    position: { lat: place.lat, lng: place.lng },
-                                    title: place.city,
-                                    label:  {
-                                    color: 'black', // Label color
-                                                                fontSize: '20px', // Label font size
-                                                                fontWeight: 'bold',
-                                    text : labelIndex.toString(),
-                                    },
-                                    icon : this.createMarkerIcon(label.toString(), place.tripcode, vehicleColor),
-//                                    Icon : {
-//                                     url: "https://maps.google.com/mapfiles/ms/icons/blue.png", // url
-//                                        scaledSize: new window.google.maps.Size(50, 50),
-//                                        labelOrigin: new window.google.maps.Point(25, 18)
-//                                    }
-                                });
-
-                                                          }
-                                else {
-
-                                if (place.panelType && place.panelType === 'pickup') {
-                             marker = new window.google.maps.Marker({
-                                                                                    position: { lat: place.lat, lng: place.lng },
-                                                                                    title: place.city,
-                                                                                    draggable: true,
-                                                                                    label:  {
-                                                                                    color: 'white', // Label color
-                                                                                                                fontSize: '20px', // Label font size
-                                                                                                                fontWeight: 'bold',
-                                                                                    text : "0",
-                                                                                    },
-                                                                                    icon : this.createMarkerIcon("0", place.tripcode, vehicleColor, 'toplan'),
-
-                                                                                });
-
-                                                } else if(place.panelType && place.panelType === 'drop') {
-
-
-                                                  marker = new window.google.maps.Marker({
-                                                                                                    position: { lat: place.lat, lng: place.lng },
-                                                                                                    title: place.city,
-                                                                                                    draggable: true,
-                                                                                                    label:  {
-                                                                                                    color: 'black', // Label color
-                                                                                                                                fontSize: '20px', // Label font size
-                                                                                                                                fontWeight: 'bold',
-                                                                                                    text : "0",
-                                                                                                    },
-                                                                                                    icon : this.createMarkerIcon("0", place.tripcode, vehicleColor, 'toplan'),
-
-                                                    });
-
-                                                    marker.markerData = {
-                                                      id: place.docnum,
-                                                      city: place.city,
-
-                                                      tripcode: place.tripcode,
-                                                      initialPosition: { lat: place.lat, lng: place.lng },
-                                                      markerObject : place, // Save original position
-
-                                                    };
-
-                                                }
-                                }
-                            }
-
-                            var url = "";
-                            var content;
-                            if (place.doctype == 'PRECEIPT') {
-                                url = {x3Url} + "/$sessions?f=GESXX10CPTH/2//M/" + place.docnum;
-                                if (place.tripno == 0)
-                                    content = "<div id='content'><div id='siteNotice'></div><div id = 'bodyContent'><a href=" + url + " target='_blank'>" + place.docnum + "</a></br>" + place.bpname + "</br>" + place.poscode + " - " + place.city + "</div></div>";
-                                else
-                                    content = "<div id='content'><div id='siteNotice'></div><div id = 'bodyContent'><a href=" + url + " target='_blank'>" + place.docnum + "</a></br>" + place.bpname + "</br>" + place.poscode + " - " + place.city + "</br>" + place.tripno + "-" + place.seq + "</br>" + place.vehicleCode +  "</br>" + place.itemCode + "</div></div>";
-
-                            } else if (place.doctype == 'DLV') {
-                                url = {x3Url} + "/$sessions?f=GESSDH/2//M/" + place.docnum;
-                                if (place.tripno == 0)
-                                    content = "<div id='content'><div id='siteNotice'></div><div id = 'bodyContent'><a href=" + url + " target='_blank'>" + place.docnum + "</a></br>" + place.bpname + "</br>" + place.poscode + " - " + place.city + "</div></div>";
-                                else
-                                    content = "<div id='content'><div id='siteNotice'></div><div id = 'bodyContent'><a href=" + url + " target='_blank'>" + place.docnum + "</a></br>" + place.bpname + "</br>" + place.poscode + " - " + place.city + "</br>" + place.tripno + "-" + place.seq + "</br>" + place.vehicleCode +  "</br>" + place.itemCode + "</div></div>";
-
-                            } else if (place.doctype == 'PICK') {
-                                url = {x3Url} + "/$sessions?f=GESPRH2/2//M/" + place.docnum;
-                                if (place.itemCode == undefined)
-                                    content = "<div id='content'><div id='siteNotice'></div><div id = 'bodyContent'><a href=" + url + " target='_blank'>" + place.docnum + "</a></br>" + place.bpname + "</br>" + place.poscode + " - " + place.city + "</div></div>";
-                                else
-                                    content = "<div id='content'><div id='siteNotice'></div><div id = 'bodyContent'><a href=" + url + " target='_blank'>" + place.docnum + "</a></br>" + place.bpname + "</br>" + place.poscode + " - " + place.city + "</br> </br> <b>Vehicle </b>: " + place.vehicleCode +  "</br> <b>TripCode : </b>" + place.itemCode + "</div></div>";
-
-                            } else {
-                                url = {x3Url} + "/$sessions?f=GESFCY/2//M/" + place.docnum;
-                                content = "<div id='content'><div id='siteNotice'></div><div id = 'bodyContent'><a href=" + url + " target='_blank'>" + SiteCode + "," + place.docnum + "</a></br>" + place.city + "</div></div>";
-
-                            }
-                            var infowindow = new window.google.maps.InfoWindow({
-                                content: content
-                            });
-                            marker.setMap(map);
-                            marker.addListener('click', function() {
-                                infowindow.open(map, marker);
-                            });
-
-
-
-                            // add drag end listhner
-                            marker.addListener('dragend', (e) => {
-                             console.log("T222 at dragend event", e);
-                             console.log("T222 at dragend marker", marker);
-                              const newPosition = {
-                                lat: e.latLng.lat(),
-                                lng: e.latLng.lng(),
-                              };
-
-                              // Loop through trips and check proximity to other markers
-                              console.log("T222 at dragable", markerArray)
-                              //for (const [tripId, trip] of Object.entries(markerArray)) {
-                                for (let tripDelivery of markerArray) {
-
-                                   let targetposition  = {
-                                     lat : tripDelivery.lat,
-                                     lng : tripDelivery.lng
-                                   };
-                                  if (this.isCloseToMarker(newPosition, targetposition)) {
-                                    this.onMarkerDragEnd(marker.markerData.markerObject, tripDelivery); // Adjusted to use `place.id`
-                                   //  marker.setPosition(marker.markerDetails.initialPosition); // Reset to original position
-                                    return;
-                                  }
-                                    else {
-                                    window.alert("insdie else part")
-                                  }
-                                }
-                              // Optionally, update the marker's position in the state
-                              //marker.setPosition(newPosition); // Visually update the marker's position
-                            });
-
-
-
-                            //  polylinePath.push({ lat: place.lat, lng: place.lng });
-                        });
-
-
-                // Code to calculate and display route using DirectionsService
-              var waypoints = markerArray.map(place => ({
-                  location: { lat: place.lat, lng: place.lng },
-                  stopover: true
-
-              }));
-
-              var directionsWaypoints = waypoints.slice(1, -1).map(waypoint => ({
-                  location: waypoint.location,
-                  stopover: true
-              }));
-
-              var request = {
-                  origin: waypoints[0].location,
-                  destination: waypoints[waypoints.length - 1].location,
-                  waypoints: directionsWaypoints,
-                  travelMode: 'DRIVING'
-              };
-
-/*
-                directionsService.route(request, function (result, status) {
-                    if (status == 'OK') {
-                        directionsDisplay.setDirections(result);
-                    }
-
-                });
-/*
-
-
-                        /* Create an arrow polyline
-                        var polyline = new window.google.maps.Polyline({
-                            path: polylinePath,
-                            geodesic: true,
-                            strokeColor: '#0000ff',
-                            strokeOpacity: 1.0,
-                            strokeWeight: 2,
-                            icons: [{
-                                icon: {
-                                    path: window.google.maps.SymbolPath.FORWARD_CLOSED_ARROW,
-                                    scale: 3,
-                                    strokeColor: '#FFFFFF',
-                                              fillColor: '#FFFFFF',
-                                              fillOpacity: 1.0,
-                                          },
-                                          offset: '0',
-                                          repeat: '100px'
-                            }]
-                        });
-                        polyline.setMap(map);
-                                 */
-                        }
-            else {
-            var map = new window.google.maps.Map(document.getElementById('google-map'), mapOptions);
-            var DepartureSite = "";
-            var SiteCode = "";
-            const centerControlDiv = document.createElement("div");
-            this.customControl(centerControlDiv, map);
-            map.controls[window.google.maps.ControlPosition.TOP_RIGHT].push(centerControlDiv);
-            markerArray.map((place) => {
-                // console.log("asdfghjkl", place)
-                var marker = null;
-                let docStatusBadge = "";
-                let deliveryno = "";
-                let seq = 0;
-                if (place.id !== undefined) {
-                    DepartureSite = place.id;
-                    SiteCode = place.id;
-                    place.docnum = place.value;
-                    place.city = place.value;
-                    marker = new window.google.maps.Marker({
-                        position: { lat: place.lat, lng: place.lng },
-                        title: place.value,
-                        icon: {
-                            url: '/assets/img/address.png'
-                        }
-                    });
-                } else if (place.panelType && place.panelType === 'pickup') {
-
-                  marker = new window.google.maps.Marker({
-                                                    position: { lat: place.lat, lng: place.lng },
-                                                    title: place.city,
-                                                    label:  {
-                                                    color: 'white', // Label color
-                                                                                fontSize: '20px', // Label font size
-                                                                                fontWeight: 'bold',
-                                                    text : "0",
-                                                    },
-                                                    icon : this.createMarkerIcon("0", place.tripcode, vehicleColor, 'toplan'),
-                //                                    Icon : {
-                //                                     url: "https://maps.google.com/mapfiles/ms/icons/blue.png", // url
-                //                                        scaledSize: new window.google.maps.Size(50, 50),
-                //                                        labelOrigin: new window.google.maps.Point(25, 18)
-                //                                    }
-
-
-                                                });
-
-
-               //     docStatusBadge = this.displayMarkerStatus(place.docnum);
-                //    seq = this.displayMarkerSeq(place.docnum);
-               //     deliveryno = this.displayDeliverynumber(place.docnum);
-
-/*
-                     let customIcon = this.createCustomMarkerIcon('blue', place.docnum);
-
-                    marker = new window.google.maps.Marker({
-                        position: { lat: place.lat, lng: place.lng },
-                        title: place.city,
-                        icon: {
-                            //url: 'http://maps.google.com/mapfiles/ms/icons/blue-dot.png'
-                            url: customIcon,
-                            scaledSize: new window.google.maps.Size(40, 40)
-                        }
-                    });
-                    */
-                } else if (place.panelType && place.panelType === 'drop') {
-
-
-                  marker = new window.google.maps.Marker({
-                                                                    position: { lat: place.lat, lng: place.lng },
-                                                                    title: place.city,
-                                                                    label:  {
-                                                                    color: 'white', // Label color
-                                                                                                fontSize: '20px', // Label font size
-                                                                                                fontWeight: 'bold',
-                                                                    text : "0",
-                                                                    },
-                                                                    icon : this.createMarkerIcon("0", place.tripcode, vehicleColor, 'toplan'),
-
-
-                /*
-                    // place.docnum = this.displayMarkerDetails(place.docnum);
-                    docStatusBadge = this.displayMarkerStatus(place.docnum);
-                    deliveryno = this.displayDeliverynumber(place.docnum);
-
-                    const customIcon = this.createCustomMarkerIcon('green', place.docnum);
-
-                    seq = this.displayMarkerSeq(place.docnum);
-                    marker = new window.google.maps.Marker({
-                        position: { lat: place.lat, lng: place.lng },
-                        title: place.city,
-                        icon: {
-                          //  url: 'https://toppng.com/free-image/simple-location-map-pin-icon-drop-pin-icon-gree-PNG-free-PNG-Images_170465.png'
-
-                                       url: customIcon,
-                                      scaledSize: new window.google.maps.Size(40, 40) // Scale marker size
-
-
-
-                        }
-                        */
-                    });
-
-                }
-                else if (place.arrivalCheck === "arrival") {
-                    var ArrIcon = '';
-                    SiteCode = place.idd;
-                    if (DepartureSite != place.idd) {
-                        ArrIcon = '/assets/img/home36.png';
-                    }
-                    else {
-                        ArrIcon = '/assets/img/address.png';
-                    }
-                    marker = new window.google.maps.Marker({
-                        position: { lat: place.lat, lng: place.lng },
-                        title: place.city,
-                        icon: {
-                            url: ArrIcon
-                        }
-                    });
-                }
-                /*else if (place.type === "arrival") {
-                                    var ArrIcon = '';
-                                     SiteCode = place.idd;
-                                    if(DepartureSite != place.idd){
-                                       ArrIcon = '/assets/img/home36.png';
-                                    }
-                                    else{
-                                       ArrIcon = '/assets/img/address.png';
-                                    }
-                                    marker = new window.google.maps.Marker({
-                                        position: { lat: place.lat, lng: place.lng },
-                                        title: place.city,
-                                        icon: {
-                                            url: ArrIcon
-                                        }
-                                    });
-                                }
-                                */
-                // const url = "http://125.18.84.158:8124/syracuse-main/html/main.html?url=/trans/x3/erp/DRYRUN/$sessions?f=GESSDH/2/M/" + place.docnum;
-                var url = "";
-                var content;
-                if (place.doctype == 'PRECEIPT') {
-                    url = `${process.env.REACT_APP_X3_URL}/$sessions?f=GESXX10CPTH/2//M/` + place.docnum;
-                    content = "<div id='content'><div id='siteNotice' style='position: absolute; padding-left: -5px'> " + seq + " </div><div id = 'bodyContent'><a href=" + url + " target='_blank'>" + place.docnum + "</a></br>" + place.bpname + "</br>" + place.poscode + " - " + place.city + "</div></div>";
-
-                }
-                else if (place.doctype == 'DLV') {
-                    url = `${process.env.REACT_APP_X3_URL}/$sessions?f=GESSDH/2//M/` + place.docnum;
-                    content = "<div id='content' style='position: relative'><div id='siteNotice' style='position: absolute; padding-left: -5px'> " + seq + " </div><div id = 'bodyContent'><a href=" + url + " target='_blank'>" + place.docnum + "</a></br>" + place.bpname + "</br>" + place.poscode + " - " + place.city + "</div></div>";
-
-                }
-                else if (place.doctype == 'PICK') {
-                    url = `${process.env.REACT_APP_X3_URL}/$sessions?f=GESPRH2/2//M/` + place.docnum;
-                    content = "<div id='content' style='position: relative'><div id='siteNotice' style='position: absolute; padding-left: -5px'> #" + seq + " </div><div id = 'bodyContent' style='padding-left : 20px'><a href=" + url + " target='_blank'>" + place.docnum + "</a></br>" + docStatusBadge + "</br>" + place.bpname + "</br>" + place.poscode + " - " + place.city + "</br>" + deliveryno + "</div></div>";
-
-                }
-                else if (place.doctype == 'RETURN') {
-                    url = `${process.env.REACT_APP_X3_URL}/$sessions?f=GESSRH/2//M/` + place.docnum;
-                    content = "<div id='content' style='position: relative'><div id='siteNotice' style='position: absolute; padding-left: -5px'> " + seq + " </div><div id = 'bodyContent'><a href=" + url + " target='_blank'>" + place.docnum + "</a></br>" + docStatusBadge + "</br>" + place.bpname + "</br>" + place.poscode + " - " + place.city + "</div></div>";
-
-                }
-                else {
-                    url = `${process.env.REACT_APP_X3_URL}/$sessions?f=GESFCY/2//M/` + place.docnum;
-                    content = "<div id='content'><div id='siteNotice'></div><div id = 'bodyContent'><a href=" + url + " target='_blank'>" + SiteCode + "," + place.docnum + "</a></br>" + place.city + "</div></div>";
-
-                }
-                var infowindow = new window.google.maps.InfoWindow({
-                    content: content
-                });
-                marker.setMap(map);
-                marker.addListener('click', function () {
-                    infowindow.open(map, marker);
-                });
-            });
-
-            }
-            this.props.updateMagChaged();
-        } else {
-            var myLatlng1 = new window.google.maps.LatLng(18.030390, -63.044780);
-            var mapOptions = {
-                zoom: 10,
-                center: myLatlng1
-            }
-            var map = new window.google.maps.Map(document.getElementById('google-map'), mapOptions);
-        }
-    }
-
-    displayPriority = (drop) => {
-
-        if (drop.priority === 10) {
-            return (
-                <h6>
-                    <span class='badge badge-primary text-uppercase'>Normal</span>
-                </h6>
-            );
-        } else if (drop.priority === 40) {
-            return (
-                <h6>
-                    <span class='badge badge-success text-uppercase'>Urgent</span>
-                </h6>
-            );
-        }
-        else if (drop.priority === 80) {
-            return (
-                <h6>
-                    <span class='badge badge-danger text-uppercase'>Critical</span>
-                </h6>
-            );
-        }
-        else {
-            return (
-                <h6>
-                    <span class='badge badge-primary text-uppercase'>Normal</span>
-                </h6>
-            );
-
-        }
-
-    }
-
-
-    displayDeliverynumber = (docnum) => {
-        let docDeliverno = '';
-
-        // Loop through drops and find matching docnum
-        this.props.currDropsPanel.drops.forEach((drop) => {
-            if (drop.docnum == docnum) {
-                docDeliverno = drop.deliveryNo
-            }
-            else {
-
-            }
+      if (arrSite && arrSite.lat && arrSite.lng) {
+
+        this.endSiteMarker = new window.google.maps.Marker({
+          map: this.map,
+          position: {
+            lat: Number(arrSite.lat),
+            lng: Number(arrSite.lng),
+          },
+          title: 'End Warehouse',
+          icon: {
+            url: SITE_ICON,
+            scaledSize: new window.google.maps.Size(40, 40),
+            anchor: new window.google.maps.Point(20, 40),
+          },
         })
-        return docDeliverno;
+      }
     }
-
-    displayMarkerStatus = (docnum) => {
-        let docStatus = '';
-
-        // Loop through drops and find matching docnum
-        this.props.currDropsPanel.drops.forEach((drop) => {
-            if (drop.docnum == docnum) {
-                // Based on the conditions, set the appropriate docStatus
-                if (drop.type == 'open' && ((drop.dlvystatus == '0' || drop.dlvystatus == '8') && !this.props.selectedDocuments.includes(docnum))) {
-                    docStatus = `<span class='badge badge-warning text-uppercase'>${this.props.t('ToPlan')}</span>`;
-                } else if (drop.type == 'open' && ((drop.dlvystatus == '0' || drop.dlvystatus == '8') && this.props.selectedDocuments.includes(docnum))) {
-                    docStatus = `<span class='badge badge-success text-uppercase'>${this.props.t('Planned')}</span>`;
-                } else if (drop.type == 'open' && drop.dlvystatus == '1') {
-                    docStatus = `<span class='badge badge-success text-uppercase'>${this.props.t('Planned')}</span>`;
-                } else if (drop.type == 'Allocated' && (drop.dlvystatus == '0' || drop.dlvystatus == '8') && this.props.selectedDocuments.includes(docnum)) {
-                    docStatus = `<span class='badge badge-success text-uppercase'>${this.props.t('Planned')}</span>`;
-                } else if (drop.type == 'Allocated' && (drop.dlvystatus == '0' || drop.dlvystatus == '8') && !this.props.selectedDocuments.includes(docnum)) {
-                    docStatus = `<span class='badge badge-warning text-uppercase'>${this.props.t('To Plan')}</span>`;
-                } else if (drop.type == 'selected' && (drop.dlvystatus == '0' || drop.dlvystatus == '8')) {
-                    docStatus = `<span class='badge badge-success text-uppercase'>${this.props.t('Planned')}</span>`;
-                } else if (drop.dlvystatus == '1') {
-                    docStatus = `<span class='badge badge-success text-uppercase'>${this.props.t('Planned')}</span>`;
-                } else if (drop.dlvystatus == '2') {
-                    docStatus = `<span class='badge badge-primary text-uppercase'>${this.props.t('OntheWay')}</span>`;
-                } else if (drop.dlvystatus == '3') {
-                    docStatus = `<span class='badge badge-warning text-uppercase'>${this.props.t('InProgress')}</span>`;
-                } else if (drop.dlvystatus == '4') {
-                    docStatus = `<span class='badge badge-success text-uppercase'>${this.props.t('Completed')}</span>`;
-                } else if (drop.dlvystatus == '5') {
-                    docStatus = `<span class='badge badge-danger text-uppercase'>${this.props.t('Skipped')}</span>`;
-                } else if (drop.dlvystatus == '6') {
-                    docStatus = `<span class='badge badge-dark text-uppercase'>${this.props.t('Rescheduled')}</span>`;
-                } else if (drop.dlvystatus == '7') {
-                    docStatus = `<span class='badge badge-danger text-uppercase'>${this.props.t('Canceled')}</span>`;
-                }
-            }
-        });
-
-        return docStatus || `<span class='badge badge-secondary text-uppercase'>${this.props.t('Completed')}</span>`;
-    }
-
-    displayMarkerSeq = (docnum) => {
-        // Find the index of the document in the selectedTrip array
-        const docSeq = this.props.selectedTrip?.totalObject?.selectedTripData?.findIndex((doc) => doc.docnum === docnum);
-
-        // Check if docSeq was found (not -1)
-        if (docSeq !== -1) {
-            return `<span class='badge badge-primary text-uppercase '>${docSeq + 1}</span>`;  // Return the index of the found document
-        } else {
-            return -1;  // Return -1 if no document with the given docnum is found
-        }
-    }
-
-
-
-
-
-    onConfirmClick = (index, docnum, vehicleCode, data) => {
-        // console.log("on document deletion", index, docnum, vehicleCode, data)
-        this.setState({
-            addConfirmShow: true,
-            confirmMessage: 'Are you sure you want to Delete?',
-            index: index,
-            docnum: docnum,
-            vehicleCode: vehicleCode
-        })
-    }
-
-    displayDeliverableStatus = (docnum) => {
-        // console.log("inside RouteMap - dropspanel", this.props.currDropsPanel);
-        var matched = false;
-        var status = '';
-        this.props.currDropsPanel.drops.length > 0 && this.props.currDropsPanel.drops.map((drop) => {
-            // console.log("inside RouteMap - 3- drop", drop);
-            // console.log("inside RouteMap - 3- docnum", docnum);
-            // console.log("inside RouteMap - 3- status", status);
-            if (drop.docnum === docnum) {
-                matched = true;
-                if (drop.dlvflg === '1') {
-                    status = "No";
-                }
-                else if (drop.dlvflg === '2' || drop.dlvflg === '3') {
-                    status = "Yes";
-                }
-                else {
-                    status = "NA"
-                }
-            }
-        });
-        // console.log("inside RouteMap - 3- final status", status);
-
-        return (<h5>
-            <td width="3%" ><span class='badge badge-success text-uppercase'>{status}</span></td>
-        </h5>);
-
-    }
-
-
-
-    displayRouteTag = (drop, lang) => {
-        // console.log("T888 language =", lang);
-        // console.log("T888 drop =", drop);
-        var myStr = drop.routeColor;
-        var subStr = myStr.match("background-color:(.*)");
-        var s = subStr[1];
-
-        if (lang == 'eng') {
-
-            return (
-                <h6>
-                    <span style={{ backgroundColor: s }} >{drop.routeTag}</span>
-                </h6>
-            );
-        }
-        else {
-            return (
-                <h6>
-                    <span style={{ backgroundColor: s }} >{drop.routeTagFRA}</span>
-                </h6>
-            );
-        }
-
-    }
-
-
-    displayRouteTypeDocBadge = (typDoc, pDropPairedDoc) => {
-        const RouteMvt = typDoc;
-        const dropPairedDoc = pDropPairedDoc
-        if (RouteMvt == 'PICK') {
-            return (
-                <h5>
-                    <td width="3%" ><span class='badge badge-primary text-uppercase'>{this.props.t('PICK')}</span></td>
-                </h5>
-            );
-        }
-        if (RouteMvt == 'DLV') {
-            if (dropPairedDoc.length > 1) {
-                return (
-                    <h5>
-                        <td width="3%"><span class='badge badge-info style="font-size:2rem'>{this.props.t('DLVEXCHANGE')}</span></td>
-                    </h5>
-                );
-            }
-            return (
-                <h5>
-                    <td width="3%" ><span class='badge badge-success style="font-size:2rem'>{this.props.t('DLV')}</span></td>
-                </h5>
-            );
-        }
-        if (RouteMvt == 'PRECEIPT') {
-            return (
-                <h5>
-                    <td width="3%" ><span class='badge badge-danger text-uppercase'>{this.props.t('PRECEIPT')}</span></td>
-                </h5>
-            );
-        }
-        if (RouteMvt == 'RETURN') {
-            return (
-                <h5>
-                    <td width="3%" ><span class='badge badge-danger text-uppercase'>{this.props.t('RETURN')}</span></td>
-                </h5>
-            );
-        }
-    }
-
-
-    toggleFullScreen  = () => {
-
-    }
-
-    onDetailList = () => {
-        this.setState({
-            ShowDetailList: true,
-            Datalist: this.props.geoData
-        });
-    }
-
-    displayDocumentMessage = (docNum, msg) => {
-
-        this.setState({
-            enableDocumnetMsgWindow: true,
-
-            selectedDocNumber: docNum,
-            noteMessage: msg,
-            anchorEl: null
-        })
-    }
-    displayCarrierMessage = (docNum, msg, type) => {
-
-        this.setState({
-            enableCarrierMsgWindow: true,
-            instructionType: type,
-            selectedDocNumber: docNum,
-            carrierMessage: msg,
-            anchorEl: null
-        })
-    }
-
-    displayBadge = (typeMvt, iSeq) => {
-        const docmvt = typeMvt
-        const Seq = iSeq + 1;
-        if (docmvt == 'PICK') {
-            return (
-                <h5>
-                    <td width="3%" class='priority'><span class='badge badge-primary text-uppercase'>{Seq}</span></td>
-                </h5>
-            );
-        }
-        if (docmvt == 'DLV') {
-            return (
-                <h5>
-                    <td width="3%" class='priority'><span class='badge badge-success '>{Seq}</span></td>
-                </h5>
-            );
-        }
-        if (docmvt == 'PRECEIPT') {
-            return (
-                <h5>
-                    <td width="3%" class='priority'><span class='badge badge-warning text-uppercase'>{Seq}</span></td>
-                </h5>
-            );
-        }
-        if (docmvt == 'RETURN') {
-            return (
-                <h5>
-                    <td width="3%" class='priority'><span class='badge badge-warning text-uppercase'>{Seq}</span></td>
-                </h5>
-            );
-        }
-         if (docmvt == 'BREAK') {
-                    return (
-                        <h5>
-                            <td width="3%" class='priority'><span class='badge badge-info text-uppercase'>{Seq}</span></td>
-                        </h5>
-                    );
-                }
-    }
-
-    onConfirmNo = () => {
-        this.setState({
-            addConfirmShow: false
-        })
-    }
-
-    onConfirmYes = (index, docnum) => {
-        let type;
-        // console.log("inside confirmyes", index, docnum);
-        if (this.state.confirmMessage.includes("Delete")) {
-            type = "Delete";
-            // console.log("inside confirmyes if", index, docnum);
-            this.props.onTripDelete(index, docnum, type, this.state.vehicleCode);
-        } else {
-            // console.log("inside confirmyes else", index, docnum);
-            this.props.onTripDelete(index, docnum);
-        }
-
-        this.setState({
-            addConfirmShow: false
-        })
-    }
-
-    onDocClick = (product, docNum, doctype) => {
-        const products = product;
-        this.setState({
-            addProductShow: true,
-            products: products,
-            docNumber: docNum,
-            doctype: doctype
-        });
-    }
-
-    getBgcolor(qtyflage) {
-
-        if (qtyflage === true) {
-            return '#feff99';
-        }
-        else {
-            return '';
-        }
-    }
-
-    onSaveNotes = (note) => {
-        // console.log("inside onsavenotes");
-        this.props.onDocMsg(this.state.selectedDocNumber, note, 'doc');
-        this.setState({ enableDocumnetMsgWindow: false })
-    }
-
-    onSaveCarrierNotes = (note, type) => {
-        // console.log("inside onsaveCarrierNotes");
-
-        if (type === 'carrier') {
-            this.props.onDocMsg(this.state.selectedDocNumber, note, 'carrier');
-        }
-        else {
-            this.props.onDocMsg(this.state.selectedDocNumber, note, 'loader');
-        }
-        this.setState({ enableCarrierMsgWindow: false })
-    }
-    handleClick = event => {
-        this.setState({ anchorEl: event.currentTarget });
-    };
-
-    handleClose = () => {
-        this.setState({ anchorEl: null });
-    };
-
-    render() {
-        // console.log("T222 inside addupdateTrip", this.props.geoData);
-        let lang = localStorage.getItem("i18nextLng");
-        let addProductsClose = () => this.setState({ addProductShow: false });
-        let Productlist_win_Close = () => this.setState({ ShowDetailList: false });
-        let addNotesClose = () => this.setState({ enableDocumnetMsgWindow: false });
-        let addCarierNotesClose = () => this.setState({ enableCarrierMsgWindow: false });
-        const { anchorEl } = this.state;
-        const open = Boolean(anchorEl);
-        if (this.props.mapChanged) {
-           // console.log("T222 inside mapchanged");
-            this.updateMap();
-        }
-
-        return (
-
-            <div class="col-md-6 pt-0 pb-0 pr-0 pl-0 routeMapOuter" >
-                <div className="mapouter topsection">
-                    <div class="reportlist-view" style={{ display: this.state.isList ? "block" : "none" }}>
-                        <button type="button" class="btn btn-secondary btn-sm" onClick={this.props.updateTimeLine}>{this.props.t('Updatebtn')}</button>
-                        &nbsp; &nbsp;
-                        <button type="button" class="btn btn-secondary btn-sm" onClick={this.onDetailList}>{this.props.t('DetailList')}</button>
-                        &nbsp; &nbsp;
-                        <button type="button" class="btn btn-secondary btn-sm" onClick={this.showMap}>{this.props.t('Map')}</button>
-
-                        {/* <table class="table" id="diagnosis_list"> */}
-                        <table class="table table-sm " id="diagnosis_list">
-                            <thead style={{ textAlign: 'left' }}>
-                                <tr>
-                                    <th></th>
-                                    <th width="3%" class="pl-2">{this.props.t('Seq')} #</th>
-                                    <th width="6%">{this.props.t('Vehicle')}</th>
-                                    <th width="6%">Document #</th>
-                                    <th width="6%">{this.props.t('Type')}</th>
-                                    <th width="6%">{this.props.t('Site')}</th>
-                                    <th width="6%">Priority</th>
-                                    <th width="6%">Client Code</th>
-                                    <th>Address</th>
-                                    <th width="6%">{this.props.t('Client')}</th>
-                                    <th width="6%">Postal City</th>
-                                    <th width="6%">{this.props.t('Weight')}</th>
-                                    <th width="6%">{this.props.t('Volume')}</th>
-                                    <th width="6%">{this.props.t('Arrival')}</th>
-                                    <th width="6%">{this.props.t('Departure')}</th>
-                                    <th width="6%">Service Time</th>
-                                    <th width="6%">{this.props.t('WaitingTime')}</th>
-                                    <th >Deliverable</th>
-                                    <th width="0%" class="pairedDoc" style={{ display: 'none' }}>{this.props.t('PairedDoc')}</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {(this.props.geoData && this.props.geoData || []).map((geoData, i) => {
-                                    let data = geoData;
-                                    this.props.markers.map((marker, index) => {
-                                        if (data.docnum === marker.docnum) {
-                                            data.lock = marker.lock;
-                                        }
-                                    })
-                                    return (
-                                        <tr key={i} id={data.docnum}
-                                            style={{ backgroundColor: data.qtyflag ? this.getBgcolor(data.qtyflag) : '' }}
-                                        >
-                                            <td>
-                                                <PopupState variant="popover" popupId="demo-popup-menu"
-                                                >
-                                                    {(popupState) => (
-                                                        <React.Fragment>
-                                                            <IconButton size="small">
-                                                                <MoreVertIcon
-                                                                    variant="contained"
-                                                                    {...bindTrigger(popupState)}
-                                                                ></MoreVertIcon>
-                                                            </IconButton>
-                                                            <Menu
-                                                                {...bindMenu(popupState)}
-
-                                                                anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-                                                                transformOrigin={{ vertical: 'top', horizontal: 'left' }}
-                                                            >
-                                                                <MenuItem onClick={() => this.displayDocumentMessage(data.docnum, data.noteMessage)}>Document Instructions</MenuItem>
-                                                                {data.doctype && data.doctype === 'DLV' ?
-                                                                    <MenuItem onClick={() => this.displayCarrierMessage(data.docnum, data.CarrierMessage, 'carrier')}>Carrier Instructions</MenuItem>
-                                                                    : ''}
-                                                                {data.doctype && data.doctype === 'DLV' || data.doctype === 'PICK' ?
-                                                                    <MenuItem onClick={() => this.displayCarrierMessage(data.docnum, data.loaderMessage, 'loader')}>Loader Instructions</MenuItem>
-                                                                    : ''}
-                                                            </Menu>
-                                                        </React.Fragment>
-                                                    )}
-                                                </PopupState>
-
-                                            </td>
-                                            <td width="3%">{this.displayBadge(data.doctype, i)}</td>
-                                            <td width="6%" name="itemCode">{data.vehicleCode}</td>
-                                           <td width="6%" name="docNum" class="docnum">
-                                             {data.doctype === 'BREAK' ? (
-                                               data.docnum
-                                             ) : (
-                                               <a
-                                                 href="#"
-                                                 onClick={() => this.onDocClick(data.products, data.docnum, data.doctype)}
-                                               >
-                                                 {data.docnum}
-                                               </a>
-                                             )}
-                                           </td>
-                                            <td width="6%" class="type" >
-                                                {data.routeColor ? this.displayRouteTag(data, lang)
-                                                    : this.displayRouteTypeDocBadge(data.doctype, data.pairedDoc)}
-                                            </td>
-                                            <td width="6%">{data.site}</td>
-                                            <td width="6%">{this.displayPriority(data)}</td>
-                                            <td width="6%">{data.bpcode}</td>
-                                            <td width="6%">{data.adresname}</td>
-                                            <td width="6%">{data.bpname}</td>
-                                            <td width="6%">{data.poscode} , {data.city}</td>
-                                            <td width="6%">{data.netweight} {data.weightunit}</td>
-                                            <td width="6%">{data.volume} {data.volume_unit}</td>
-                                            <td width="6%">{data.arrival && data.arrival}</td>
-                                            <td width="6%">{data.end && data.end}</td>
-                                            <td width="6%">{formatTime(convertHrToSec(data.serviceTime))}</td>
-                                            <td width="6%">{formatTime(convertHrToSec(data.waitingTime))}</td>
-                                            <td>{this.displayDeliverableStatus(data.docnum)}</td>
-                                            <td width="3%">
-                                                {data.lock || (this.props.trips && this.props.trips[0] && this.props.trips[0].lock) ? '' :
-                                                    <button class="btn btn-danger btn-sm rounded-0" type="button" data-toggle="tooltip" data-placement="top" title="Delete"
-                                                        onClick={() => this.onConfirmClick(i, data.docnum, data.vehicleCode, data)} disabled={data.lock || data.doctype === "BREAK"}>
-                                                        <i class="fa fa-trash"></i>
-                                                    </button>}
-                                            </td>
-                                            <td width="0%" class="pairedDoc" style={{ display: 'none' }}>{data.pairedDoc}</td>
-                                            {(data.lock || (this.props.trips && this.props.trips[0] && this.props.trips[0].lock)) ? <td width="0%" class="lock" style={{ display: 'none' }}>lock</td> :
-                                                <td width="0%" class="lock" style={{ display: 'none' }}>unlock</td>}
-                                            {/* <td width="0%" class="lock" style={{ display: 'none' }}>
-                                                {data.lock}
-                                            </td> */}
-                                        </tr>
-                                    );
-                                })}
-                            </tbody>
-                        </table>
-                    </div>
-                    <div class="gmap_canvas" style={{ display: this.state.isMap ? "block" : "none", zIndex: 1 }}>
-
-                        <div
-                            id="google-map"
-                            style={{ width: '100%', height: '100%' }}
-                        />
-                        <button className="toggle-button" onClick={this.toggleFullScreen}>
-                               {this.state.isFullScreen ? "Exit Full Screen" : "Full Screen"}
-                              </button>
-                    </div>
-                </div>
-                <DeleteConfirm
-                    show={this.state.addConfirmShow}
-                    onHide={this.onConfirmNo}
-                    confirmDelete={this.onConfirmYes}
-                    index={this.state.index}
-                    docnum={this.state.docnum}
-                    confirmMessage={this.state.confirmMessage}
-                ></DeleteConfirm>
-                <DisplayProducts
-                    show={this.state.addProductShow}
-                    onHide={addProductsClose}
-                    products={this.state.products}
-                    docNum={this.state.docNumber}
-                    doctype={this.state.doctype}
-                ></DisplayProducts>
-                <ProductsDetailList
-                    show={this.state.ShowDetailList}
-                    onHide={Productlist_win_Close}
-                    Datalist={this.state.Datalist}
-                    vehiclePanel={this.props.vehiclePanel}
-                ></ProductsDetailList>
-                <DisplayNotes
-                    show={this.state.enableDocumnetMsgWindow}
-                    onHide={addNotesClose}
-                    notes={this.state.noteMessage}
-                    onSaveNotes={this.onSaveNotes}
-                    displayEdit={true}
-                ></DisplayNotes>
-                <DisplayCarrierNotes
-                    show={this.state.enableCarrierMsgWindow}
-                    onHide={addCarierNotesClose}
-                    notes={this.state.carrierMessage}
-                    type={this.state.instructionType}
-                    onSaveCarrierNotes={this.onSaveCarrierNotes}
-                    displayEdit={true}
-                ></DisplayCarrierNotes>
-            </div>
-
-        );
-    }
+  }
 }
 
-export default withNamespaces()(RouteMap);
+  requestRemoveFromPanel = (doc) => {
+    this.setState({
+      pendingRemoveDoc: doc,
+      removeConfirmShow: true,
+    })
+  }
+
+
+
+  askRemoveConfirm = (doc) => {
+
+
+    this.setState({
+      pendingRemoveDoc: doc,
+      removeConfirmShow: true,
+    })
+  }
+
+  confirmRemove = () => {
+    const { pendingRemoveDoc, stagedRemoveDocs } = this.state
+    if (!pendingRemoveDoc) return
+
+    this.setState(
+      {
+        stagedRemoveDocs: [...stagedRemoveDocs, pendingRemoveDoc],
+        pendingRemoveDoc: null,
+        removeConfirmShow: false,
+      },
+      () => {
+        this.updateMarkers()
+        this.updateTripPolyline()
+        toast.warn('Document marked for removal')
+      }
+    )
+  }
+
+
+
+  // ===================== POLYLINE =====================
+  // updateTripPolyline = () => {
+  //   // ---------- CLEAR WHEN NO TRIP ----------
+  //   if (!this.props.selectedTrips || !this.props.selectedTrips[0]) {
+  //     if (this.directionsRenderer) {
+  //       this.directionsRenderer.setDirections({ routes: [] })
+  //     }
+  //     return
+  //   }
+
+  //   if (!this.map || !window.google || !window.google.maps) return
+
+  //   if (!this.directionsService) {
+  //     this.directionsService = new window.google.maps.DirectionsService()
+  //   }
+
+  //   if (!this.directionsRenderer) {
+  //     this.directionsRenderer = new window.google.maps.DirectionsRenderer({
+  //       suppressMarkers: true, // we already draw custom markers
+  //       polylineOptions: {
+  //         strokeColor: '#2563eb',
+  //         strokeOpacity: 0.9,
+  //         strokeWeight: 4,
+  //       },
+  //     })
+  //     this.directionsRenderer.setMap(this.map)
+  //   }
+
+  //   // ---------- SITES ----------
+  //   const trip = this.props.selectedTrips[0]
+  //   const sites = this.props.sites || []
+
+  //   const depSite = sites.find(s => s.id === trip.depSite)
+  //   const arrSite = sites.find(s => s.id === trip.arrSite)
+
+  //   // ---------- PLANNED DOCS ----------
+  //   /*const tripDocs = compactArray(this.props.geoData || [])
+  //     .filter(d => d.seq > 0 && d.lat && d.lng)
+  //     .sort((a, b) => a.seq - b.seq)
+  //     */
+
+  //   //    const tripDocs = this.getEffectiveTripDocs()
+
+  //   const tripDocs = this.getEffectiveTripDocs()
+  //     .filter(d => d.lat && d.lng)
+  //     .sort((a, b) => (a.seq || 0) - (b.seq || 0))
+
+  //   let points = []
+
+  //   // START
+  //   if (depSite) {
+  //     points.push({ lat: depSite.lat, lng: depSite.lng })
+  //   }
+
+  //   // STOPS
+  //   tripDocs.forEach(d => {
+  //     points.push({ lat: d.lat, lng: d.lng })
+  //   })
+
+  //   /* END (avoid duplicate if same as start)
+  //   if (
+  //     arrSite &&
+  //     (!depSite ||
+  //       depSite.lat !== arrSite.lat ||
+  //       depSite.lng !== arrSite.lng)
+  //   ) {
+  //     points.push({ lat: arrSite.lat, lng: arrSite.lng })
+  //   }
+
+  //   */
+
+  //   if (arrSite?.lat && arrSite?.lng) {
+  //     points.push({
+  //       lat: arrSite.lat,
+  //       lng: arrSite.lng,
+  //     })
+  //   }
+
+  //   if (points.length < 2) {
+  //     this.directionsRenderer.setDirections({ routes: [] })
+  //     return
+  //   }
+
+  //   const origin = points[0]
+  //   const destination = points[0]
+
+  //   const waypoints = points.slice(1, -1).map(p => ({
+  //     location: p,
+  //     stopover: true,
+  //   }))
+
+
+  //   // ---------- REQUEST REAL ROAD ROUTE ----------
+  //   this.directionsService.route(
+  //     {
+  //       origin,
+  //       destination,
+  //       waypoints,
+  //       travelMode: window.google.maps.TravelMode.DRIVING,
+  //       optimizeWaypoints: false,
+  //     },
+  //     (result, status) => {
+  //       if (status === 'OK') {
+  //         this.directionsRenderer.setDirections(result)
+  //       } else {
+  //         console.warn('Directions failed:', status)
+  //       }
+  //     }
+  //   )
+  // }
+
+  updateTripPolyline = () => {
+
+  const trip = this.props.selectedTrips?.[0]
+
+  // ---------- CLEAR WHEN NO TRIP ----------
+  if (!trip) {
+    if (this.tripPolyline) {
+      this.tripPolyline.setMap(null)
+      this.tripPolyline = null
+    }
+
+    if (this.directionsRenderer) {
+      this.directionsRenderer.setDirections({ routes: [] })
+    }
+
+    return
+  }
+
+  if (!this.map) return
+
+  const geometry = trip?.totalObject?.geometry
+
+  // ==================================================
+  // 1️⃣ USE VRP GEOMETRY (FAST PATH)
+  // ==================================================
+  if (geometry) {
+
+    try {
+
+      // remove previous directions
+      if (this.directionsRenderer) {
+        this.directionsRenderer.setDirections({ routes: [] })
+      }
+
+      // remove previous polyline
+      if (this.tripPolyline) {
+        this.tripPolyline.setMap(null)
+      }
+
+      const decodedPath =
+        window.google.maps.geometry.encoding.decodePath(geometry)
+
+      this.tripPolyline = new window.google.maps.Polyline({
+        path: decodedPath,
+        geodesic: true,
+        strokeColor: '#2563eb',
+        strokeOpacity: 0.9,
+        strokeWeight: 4,
+      })
+
+      this.tripPolyline.setMap(this.map)
+
+      // fit map
+      const bounds = new window.google.maps.LatLngBounds()
+      decodedPath.forEach(p => bounds.extend(p))
+      this.map.fitBounds(bounds)
+
+      return
+
+    } catch (err) {
+      console.warn("Geometry decode failed. Falling back to Directions.", err)
+    }
+  }
+
+  // ==================================================
+  // 2️⃣ FALLBACK → GOOGLE DIRECTIONS
+  // ==================================================
+
+  if (!this.directionsService) {
+    this.directionsService = new window.google.maps.DirectionsService()
+  }
+
+  if (!this.directionsRenderer) {
+    this.directionsRenderer = new window.google.maps.DirectionsRenderer({
+      suppressMarkers: true,
+      polylineOptions: {
+        strokeColor: '#2563eb',
+        strokeOpacity: 0.9,
+        strokeWeight: 4,
+      },
+    })
+
+    this.directionsRenderer.setMap(this.map)
+  }
+
+  const sites = this.props.sites || []
+
+  const depSite = sites.find(s => s.id === trip.depSite)
+  const arrSite = sites.find(s => s.id === trip.arrSite)
+
+  const tripDocs = this.getEffectiveTripDocs()
+    .filter(d => d.lat && d.lng)
+    .sort((a, b) => (a.seq || 0) - (b.seq || 0))
+
+  let points = []
+
+  if (depSite) {
+    points.push({ lat: depSite.lat, lng: depSite.lng })
+  }
+
+  tripDocs.forEach(d => {
+    points.push({ lat: d.lat, lng: d.lng })
+  })
+
+  if (arrSite?.lat && arrSite?.lng) {
+    points.push({ lat: arrSite.lat, lng: arrSite.lng })
+  }
+
+  if (points.length < 2) {
+    this.directionsRenderer.setDirections({ routes: [] })
+    return
+  }
+
+  const origin = points[0]
+  const destination = points[points.length - 1]
+
+  const waypoints = points.slice(1, -1).map(p => ({
+    location: p,
+    stopover: true,
+  }))
+
+  this.directionsService.route(
+    {
+      origin,
+      destination,
+      waypoints,
+      travelMode: window.google.maps.TravelMode.DRIVING,
+      optimizeWaypoints: false,
+    },
+    (result, status) => {
+
+      if (status === 'OK') {
+
+        if (this.tripPolyline) {
+          this.tripPolyline.setMap(null)
+          this.tripPolyline = null
+        }
+
+        this.directionsRenderer.setDirections(result)
+
+      } else {
+
+        console.warn('Directions failed:', status)
+
+      }
+    }
+  )
+}
+
+
+
+  updateTripPolyline_working2_old = () => {
+
+
+    if (!this.props.selectedTrips || !this.props.selectedTrips[0]) {
+      if (this.tripPolyline) {
+        this.tripPolyline.setMap(null)
+        this.tripPolyline = null
+      }
+      return
+    }
+
+    if (!this.map || !this.props.geoData?.length) return;
+
+    if (!this.directionsService || !this.directionsRenderer) return;
+
+    // ---- get start / end sites ----
+    const { departure, arrival } = this.getTripSites();
+
+    // ---- planned trip documents ----
+    const tripDocs = this.props.geoData
+      .filter((d) => d.lat && d.lng)
+      .sort((a, b) => (a.seq || 0) - (b.seq || 0));
+
+    let points = [];
+
+    // START (warehouse)
+    if (departure?.lat && departure?.lng) {
+      points.push({
+        lat: departure.lat,
+        lng: departure.lng,
+      });
+    }
+
+    // DOCUMENT STOPS
+    tripDocs.forEach((d) => {
+      points.push({
+        lat: d.lat,
+        lng: d.lng,
+      });
+    });
+
+    // END (warehouse)
+    if (arrival?.lat && arrival?.lng) {
+      points.push({
+        lat: arrival.lat,
+        lng: arrival.lng,
+      });
+    }
+
+    // Need at least 2 points
+    if (points.length < 2) {
+      this.directionsRenderer.setDirections({ routes: [] });
+      return;
+    }
+
+    const origin = points[0];
+    const destination = points[points.length - 1];
+
+    const waypoints = points.slice(1, -1).map((p) => ({
+      location: p,
+      stopover: true,
+    }));
+
+    this.directionsService.route(
+      {
+        origin,
+        destination,
+        waypoints,
+        travelMode: window.google.maps.TravelMode.DRIVING,
+        optimizeWaypoints: false,
+      },
+      (result, status) => {
+        if (status === 'OK') {
+          this.directionsRenderer.setDirections(result);
+        } else {
+          console.warn('Directions failed:', status);
+        }
+      }
+    );
+  };
+
+
+  // ===================== DRAG =====================
+  isCloseToMarker = (a, b, t = 0.005) =>
+    Math.abs(a.lat - b.lat) < t && Math.abs(a.lng - b.lng) < t
+
+  getSameCoordinateToPlanDocs = (doc) => {
+    const stagedAddDocIds = new Set(this.state.stagedAddDocs.map(d => d.docnum))
+    return compactArray(this.props.markers || []).filter(d =>
+      d &&
+      d.docnum &&
+      (!d.seq || d.seq === 0) &&
+      d.lat &&
+      d.lng &&
+      !stagedAddDocIds.has(d.docnum) &&
+      this.isCloseToMarker(
+        { lat: Number(doc.lat), lng: Number(doc.lng) },
+        { lat: Number(d.lat), lng: Number(d.lng) },
+        0.00001
+      )
+    )
+  }
+
+  resetDraggedMarker = (marker) => {
+    if (marker?.__originalPosition) {
+      marker.setPosition(marker.__originalPosition)
+      delete marker.__originalPosition
+    }
+  }
+
+  resolveDropTarget = (dropPoint) => {
+    const plannedDocs = this.getEffectiveTripDocs()
+      .filter(d => d.seq > 0 && d.lat && d.lng)
+
+    return plannedDocs.find(d =>
+      this.isCloseToMarker(dropPoint, { lat: d.lat, lng: d.lng })
+    )
+  }
+
+  getCompatibilityMessage = (doc, trip) => {
+    if (!trip?.vehicleObject) return ''
+
+    let productCompatability = true
+    const vehProdCategories = trip.vehicleObject.tclcod
+      ? trip.vehicleObject.tclcod.trim().split(/\s+/)
+      : []
+
+    if (
+      trip?.vehicleObject?.aprodCategDesc?.toLowerCase() !== 'all' &&
+      doc.aprodCategDesc?.toLowerCase() !== 'all'
+    ) {
+      for (let i = 0; i < (doc.products || []).length; i++) {
+        const productCategory = doc.products[i].productCateg
+        if (!vehProdCategories.includes(productCategory)) {
+          productCompatability = false
+        }
+      }
+    }
+
+    let vehCustomerCompatability = true
+    const vehCustomerCategories = trip.vehicleObject.customerlist
+      ? trip.vehicleObject.customerlist.trim().split(/\s+/)
+      : []
+
+    if (
+      trip?.vehicleObject?.avehClassListDesc?.toLowerCase() !== 'all' &&
+      doc.avehClassListDesc?.toLowerCase() !== 'all'
+    ) {
+      const customer = doc.bpcode
+      if (!vehCustomerCategories.includes(customer)) {
+        vehCustomerCompatability = false
+      }
+    }
+
+    let routeCodeCompatability = true
+    const vehRouteCode = trip.vehicleObject.routeCode
+      ? trip.vehicleObject.routeCode.split(',').map(v => v.trim())
+      : []
+
+    if (
+      trip?.vehicleObject?.aroutecodeDesc?.toLowerCase() !== 'all' &&
+      doc.aroutecodeDesc?.toLowerCase() !== 'all'
+    ) {
+      if (!vehRouteCode.includes(doc.routeCode)) {
+        routeCodeCompatability = false
+      }
+    }
+
+    let message = ''
+    if (!productCompatability) {
+      message += `Products are not compatible with the vehicle's product category restrictions. \n`
+    }
+    if (!vehCustomerCompatability) {
+      message += `The selected vehicle is not compatible with customer's vehicle class restrictions. \n`
+    }
+    if (!routeCodeCompatability) {
+      message += `The selected vehicle route code does not match the customer's route code. \n`
+    }
+
+    return message
+  }
+
+  stageMultipleDocs = (docsToAdd) => {
+    const existing = new Set(this.state.stagedAddDocs.map(d => d.docnum))
+    const filtered = docsToAdd.filter(d => !existing.has(d.docnum))
+
+    if (!filtered.length) {
+      this.setState({
+        multiDragConfirmShow: false,
+        pendingSameCoordDocs: [],
+      })
+      toast.info('All same-location documents are already staged')
+      return
+    }
+
+    this.setState(
+      prev => ({
+        stagedAddDocs: [...prev.stagedAddDocs, ...filtered],
+        pendingDoc: null,
+        pendingMarker: null,
+        pendingDropPoint: null,
+        pendingSameCoordDocs: [],
+        addConfirmShow: false,
+        multiDragConfirmShow: false,
+        warningflg: false,
+      }),
+      () => {
+        this.updateMarkers()
+        this.updateTripPolyline()
+        toast.success(`${filtered.length} documents added to trip`)
+      }
+    )
+  }
+
+  proceedSingleDrop = (doc, dropPoint, marker) => {
+    const trip = this.props.selectedTrips?.[0]
+    const target = this.resolveDropTarget(dropPoint)
+
+    if (!target) {
+      this.resetDraggedMarker(marker)
+      return
+    }
+
+    const message = this.getCompatibilityMessage(doc, trip)
+    if (message) {
+      this.setState({
+        pendingDoc: doc,
+        pendingMarker: marker,
+        warningflg: false,
+        addConfirmShow: true,
+        confirmMessage: `${message} \n Are you sure you want to add document ${doc.docnum} to this trip?`,
+      })
+      return
+    }
+
+    this.setState({
+      pendingDoc: doc,
+      pendingMarker: marker,
+      warningflg: false,
+      addConfirmShow: true,
+      confirmMessage: `Do you want to add document ${doc.docnum} to this trip?`,
+    })
+  }
+
+  proceedMultiDropSkipValidation = () => {
+    const { pendingSameCoordDocs, pendingDropPoint, pendingMarker } = this.state
+    if (!pendingSameCoordDocs?.length || !pendingDropPoint) return
+
+    const target = this.resolveDropTarget(pendingDropPoint)
+    if (!target) {
+      this.resetDraggedMarker(pendingMarker)
+      this.setState({
+        multiDragConfirmShow: false,
+        pendingSameCoordDocs: [],
+        pendingDoc: null,
+        pendingMarker: null,
+        pendingDropPoint: null,
+      })
+      return
+    }
+
+    this.stageMultipleDocs(pendingSameCoordDocs)
+  }
+
+  proceedMultiDropSingle = () => {
+    const { pendingDoc, pendingDropPoint, pendingMarker } = this.state
+    if (!pendingDoc || !pendingDropPoint) return
+
+    this.setState(
+      {
+        multiDragConfirmShow: false,
+        pendingSameCoordDocs: [],
+      },
+      () => this.proceedSingleDrop(pendingDoc, pendingDropPoint, pendingMarker)
+    )
+  }
+
+  cancelMultiDrop = () => {
+    this.resetDraggedMarker(this.state.pendingMarker)
+    this.setState({
+      multiDragConfirmShow: false,
+      pendingSameCoordDocs: [],
+      pendingDropPoint: null,
+      pendingDoc: null,
+      pendingMarker: null,
+      warningflg: false,
+    })
+  }
+  handleToPlanDrop = (doc, latLng, marker) => {
+    if (doc.seq > 0) return
+
+    if (this.state.stagedAddDocs.some(d => d.docnum === doc.docnum)) {
+      this.resetDraggedMarker(marker)
+      this.setState({
+        pendingDoc: doc,
+        pendingMarker: marker,
+        addConfirmShow: true,
+        warningflg: true,
+        confirmMessage: `Already document ${doc.docnum} planned  to this trip?`,
+      })
+      return
+    }
+
+    const dropPoint = {
+      lat: latLng.lat(),
+      lng: latLng.lng(),
+    }
+
+    const sameCoordDocs = this.getSameCoordinateToPlanDocs(doc)
+    if (sameCoordDocs.length > 1) {
+      this.setState({
+        pendingDoc: doc,
+        pendingMarker: marker,
+        pendingDropPoint: dropPoint,
+        pendingSameCoordDocs: sameCoordDocs,
+        warningflg: false,
+        multiDragConfirmShow: true,
+      })
+      return
+    }
+
+    this.proceedSingleDrop(doc, dropPoint, marker)
+  }
+  handleToPlanDrop__ = (doc, latLng) => {
+    // Only To-Plan docs
+    if (doc.seq > 0) return
+
+    const dropPoint = {
+      lat: latLng.lat(),
+      lng: latLng.lng(),
+    }
+
+    const plannedDocs = compactArray(this.props.geoData || [])
+      .filter(d => d.seq > 0 && d.lat && d.lng)
+
+    const target = plannedDocs.find(d =>
+      this.isCloseToMarker(dropPoint, { lat: d.lat, lng: d.lng })
+    )
+
+    if (!target) {
+      // ❌ Not dropped on route → reset
+      this.updateMarkers()
+      return
+    }
+
+    if (this.state.stagedAddDocs.some(d => d.docnum === doc.docnum)) {
+      toast.info('Document already staged for this trip')
+      return
+    }
+
+
+    // ✅ Store pending doc and ask confirmation
+    this.setState({
+      pendingDoc: doc,
+      addConfirmShow: true,
+      confirmMessage: `Do you want to add document ${doc.docnum} to this trip?`,
+    })
+  }
+
+
+  confirmAddToTrip = () => {
+    const { pendingDoc, stagedAddDocs } = this.state
+    if (!pendingDoc) return
+
+    this.setState(
+      {
+        stagedAddDocs: [...stagedAddDocs, pendingDoc],
+        pendingDoc: null,
+        pendingMarker: null,
+        pendingDropPoint: null,
+        pendingSameCoordDocs: [],
+        multiDragConfirmShow: false,
+        warningflg: false,
+        addConfirmShow: false,
+      },
+      () => {
+        this.updateMarkers()
+        this.updateTripPolyline()
+        if (this.isListUiVisible()) {
+          this.initListSortable()
+        }
+      }
+    )
+  }
+
+
+  isTripLocked = () => {
+    const trip = this.props.selectedTrips?.[0]
+    const lockVal = trip?.lock
+
+    if (lockVal === true || lockVal === 1 || lockVal === '1') return true
+    if (typeof lockVal === 'string' && lockVal.toLowerCase() === 'true') return true
+
+    return false
+  }
+
+
+  confirmAddNo = () => {
+    const { pendingDoc } = this.state
+
+
+    if (pendingDoc && this.markersByDoc[pendingDoc.docnum]) {
+      const marker = this.markersByDoc[pendingDoc.docnum]
+
+      this.resetDraggedMarker(marker)
+    }
+
+    this.setState({
+      addConfirmShow: false,
+      pendingDoc: null,
+      pendingMarker: null,
+      pendingDropPoint: null,
+      pendingSameCoordDocs: [],
+      multiDragConfirmShow: false,
+    })
+  }
+
+
+  undoAdd = (docnum) => {
+    this.setState(
+      prev => ({
+        stagedAddDocs: prev.stagedAddDocs.filter(d => d.docnum !== docnum),
+      }),
+      () => {
+        this.updateMarkers()
+        this.updateTripPolyline()
+      }
+    )
+  }
+
+
+  undoRemove = (docnum) => {
+    this.setState(
+      prev => ({
+        stagedRemoveDocs: prev.stagedRemoveDocs.filter(d => d.docnum !== docnum),
+      }),
+      () => {
+        this.updateMarkers()
+        this.updateTripPolyline()
+      }
+    )
+  }
+
+
+
+
+  createSiteMarkers = () => {
+    if (!this.map) return;
+
+    const { departure, arrival } = this.getTripSites();
+
+    // ===== DEPARTURE (WAREHOUSE / HOME) =====
+    if (departure) {
+      if (!this.departureMarker) {
+        this.departureMarker = new window.google.maps.Marker({
+          map: this.map,
+          position: { lat: departure.lat, lng: departure.lng },
+          title: departure.name || 'Departure Site',
+          icon: {
+            url: 'https://maps.google.com/mapfiles/ms/icons/blue-home.png',
+            scaledSize: new window.google.maps.Size(40, 40),
+          },
+        });
+      } else {
+        // update position if trip changes
+        this.departureMarker.setPosition({
+          lat: departure.lat,
+          lng: departure.lng,
+        });
+      }
+    }
+
+    // ===== ARRIVAL (END SITE) =====
+    if (arrival) {
+      if (!this.arrivalMarker) {
+        this.arrivalMarker = new window.google.maps.Marker({
+          map: this.map,
+          position: { lat: arrival.lat, lng: arrival.lng },
+          title: arrival.name || 'Arrival Site',
+          icon: {
+            url: 'https://maps.google.com/mapfiles/ms/icons/red-flag.png',
+            scaledSize: new window.google.maps.Size(40, 40),
+          },
+        });
+      } else {
+        this.arrivalMarker.setPosition({
+          lat: arrival.lat,
+          lng: arrival.lng,
+        });
+      }
+    }
+  };
+
+
+  getTripSites = () => {
+    const trip = this.props.selectedTrips?.[0];
+    if (!trip || !Array.isArray(this.props.sites)) return {};
+
+    const depCode = String(trip.depSite || '');
+    const arrCode = String(trip.arrSite || '');
+
+    const depSite = this.props.sites.find(
+      (s) => String(s.id) === depCode
+    );
+
+    const arrSite = this.props.sites.find(
+      (s) => String(s.id) === arrCode
+    );
+
+    return {
+      departure: depSite
+        ? {
+          lat: Number(depSite.lat),
+          lng: Number(depSite.lng),
+          name: depSite.value,
+          siteId: depSite.id,
+        }
+        : null,
+
+      arrival: arrSite
+        ? {
+          lat: Number(arrSite.lat),
+          lng: Number(arrSite.lng),
+          name: arrSite.value,
+          siteId: arrSite.id,
+        }
+        : null,
+    };
+  };
+
+  areSameLocation = (a, b, tolerance = 0.0001) => {
+    if (!a || !b) return false;
+    return (
+      Math.abs(a.lat - b.lat) < tolerance &&
+      Math.abs(a.lng - b.lng) < tolerance
+    );
+  };
+
+  createSiteIcon = (type) => {
+    if (type === 'both') {
+      return {
+        url: 'https://maps.google.com/mapfiles/ms/icons/purple-home.png',
+        scaledSize: new window.google.maps.Size(48, 48),
+      };
+    }
+
+    if (type === 'start') {
+      return {
+        url: 'https://maps.google.com/mapfiles/ms/icons/homegardenbusiness.png',
+        scaledSize: new window.google.maps.Size(44, 44),
+      };
+    }
+
+    if (type === 'end') {
+      return {
+        url: 'https://maps.google.com/mapfiles/ms/icons/red-home.png',
+        scaledSize: new window.google.maps.Size(44, 44),
+      };
+    }
+
+    return null;
+  };
+
+
+
+  updateSiteMarkers = () => {
+    if (!this.map) return;
+
+    const { departure, arrival } = this.getTripSites();
+
+    if (departure) {
+      if (!this.startMarker) {
+        this.startMarker = new window.google.maps.Marker({
+          map: this.map,
+          position: departure,
+          icon: this.createSiteIcon('start'),
+          label: {
+            text: 'S',
+            color: '#fff',
+            fontWeight: 'bold',
+          },
+          title: `Start: ${departure.name}`,
+        });
+
+        this.attachInfoWindow(this.startMarker, `
+        <b>Start Site</b><br/>
+        ${departure.name}<br/>
+        Site: ${departure.siteId}
+      `);
+      }
+    }
+
+    if (arrival) {
+      if (!this.endMarker) {
+        this.endMarker = new window.google.maps.Marker({
+          map: this.map,
+          position: arrival,
+          icon: this.createSiteIcon('end'),
+          label: {
+            text: 'E',
+            color: '#fff',
+            fontWeight: 'bold',
+          },
+          title: `End: ${arrival.name}`,
+        });
+
+        this.attachInfoWindow(this.endMarker, `
+        <b>End Site</b><br/>
+        ${arrival.name}<br/>
+        Site: ${arrival.siteId}
+      `);
+      }
+    }
+  };
+
+
+
+  refreshMapSize = () => {
+    if (this.map) {
+      window.google.maps.event.trigger(this.map, "resize");
+    }
+  };
+
+  showList = () => {
+
+    if (this.map) {
+      this.lastCenter = this.map.getCenter();
+    }
+    this.setState(
+      { isMap: false, isList: true },
+      () => {
+        setTimeout(() => this.initListSortable(), 0)
+      }
+    );
+  };
+
+
+  showMap = () => {
+    this.setState(
+      {
+        isMap: true,
+        isList: false,
+      },
+      () => {
+        // 🔥 WAIT for DOM to be visible
+        setTimeout(() => {
+          if (this.map) {
+            window.google.maps.event.trigger(this.map, 'resize')
+
+            // restore last center
+            if (this.lastCenter) {
+              this.map.setCenter(this.lastCenter)
+            }
+          } else {
+            // safety: map was never initialized
+            this.initMapOnce()
+            this.initDirectionsOnce()
+            this.updateMarkers()
+            this.updateTripPolyline()
+          }
+        }, 200)
+      }
+    )
+  }
+
+  //    LIVE metrics calculations for trip summary display
+  getLiveTripMetrics = () => {
+    const docs = this.getEffectiveTripDocs()
+
+    const totalCases = docs.reduce(
+      (t, d) => t + (Number(d.mainCases) || 0),
+      0
+    )
+
+    const totalWeight = docs.reduce(
+      (t, d) => t + (Number(d.netweight) || 0),
+      0
+    )
+
+    const totalPallets = docs.reduce(
+      (t, d) => t + (Number(d.noofCases) || 0),
+      0
+    )
+
+    return {
+      cases: totalCases,
+      pallets: parseFloat(totalPallets).toFixed(2),
+      capacity: totalWeight.toFixed(2),
+      stops: docs.length,
+    }
+  }
+
+
+
+  // Validate each drag and drop the document
+  validateAddToTrip = (doc, targetDoc) => {
+    // Example rules (adjust as needed)
+
+    if (doc.bpcode !== targetDoc.bpcode) {
+      return 'Customer mismatch. Cannot add to this route.'
+    }
+
+    if (doc.netweight > this.props.selectedTrips[0].capacity) {
+      return 'Exceeds vehicle capacity.'
+    }
+
+    if (doc.doctype === 'RETURN') {
+      return 'Return documents cannot be added to this trip.'
+    }
+
+    return null // ✅ valid
+  }
+
+
+  //   ======================= render each of doc type ====================
+  renderDocRow = (doc, color, onClose, flag) => (
+    <div
+      key={doc.docnum}
+      style={{
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 6,
+        color,
+      }}
+    >
+      <div>
+        <div>
+          <b>{doc.seq ? `#${doc.seq}` : ''} </b> {' '}
+          <b>{doc.docnum}</b> — {this.normalizeApostrophes(doc.bpname) || '-'}</div>
+        <div style={{ fontSize: 12, color: '#555' }}>
+          {doc.city || '-'}
+        </div>
+        <div style={{ fontSize: 12, color: '#555' }}>
+          {parseInt(doc.mainCases) || 0} CS  <b>|| </b> {parseFloat(doc.noofCases).toFixed(2) || 0}  PAL
+        </div>
+      </div>
+      {flag &&
+        <button onClick={onClose}>✕</button>
+      }
+    </div>
+  )
+  // ====================Split screen ====================
+
+
+  toggleSplitFullscreen = async () => {
+    const el = document.getElementById('map-fullscreen-wrapper')
+    if (!el) return
+
+    if (!document.fullscreenElement) {
+      await el.requestFullscreen()
+    }
+
+    this.setState(
+      {
+        isSplitView: true,
+        isFullScreen: true,   // 🔥 REQUIRED
+        isMap: true,
+        isList: true,
+      },
+      () => {
+        setTimeout(() => {
+          if (this.map) {
+            window.google.maps.event.trigger(this.map, 'resize')
+          } else {
+            this.initMapOnce()
+            this.initDirectionsOnce()
+          }
+          this.initListSortable()
+        }, 300)
+      }
+    )
+  }
+
+
+  toggleSplitView = () => {
+    this.setState(
+      prev => ({
+        isSplitView: !prev.isSplitView,
+        isMap: true,
+        isList: true, // force both visible
+      }),
+      () => {
+        setTimeout(() => {
+          if (this.map) {
+            window.google.maps.event.trigger(this.map, 'resize')
+          }
+          this.initListSortable()
+        }, 200)
+      }
+    )
+  }
+
+  startSplitResize = (e) => {
+    e.preventDefault()
+    this.isResizingSplit = true
+    document.body.style.cursor = 'row-resize'
+    document.body.style.userSelect = 'none'
+    document.addEventListener('mousemove', this.onSplitResizeMove)
+    document.addEventListener('mouseup', this.stopSplitResize)
+  }
+
+  onSplitResizeMove = (e) => {
+    if (!this.isResizingSplit) return
+
+    const wrapper = document.getElementById('map-fullscreen-wrapper')
+    if (!wrapper) return
+
+    const rect = wrapper.getBoundingClientRect()
+    if (!rect.height) return
+
+    const pointerY = e.clientY - rect.top
+    let nextPct = (pointerY / rect.height) * 100
+    nextPct = Math.max(20, Math.min(80, nextPct))
+
+    this.setState({ splitMapHeightPct: nextPct }, () => {
+      if (this.map) {
+        window.google.maps.event.trigger(this.map, 'resize')
+      }
+    })
+  }
+
+  stopSplitResize = () => {
+    if (!this.isResizingSplit) return
+
+    this.isResizingSplit = false
+    document.body.style.cursor = ''
+    document.body.style.userSelect = ''
+    document.removeEventListener('mousemove', this.onSplitResizeMove)
+    document.removeEventListener('mouseup', this.stopSplitResize)
+
+    if (this.map) {
+      window.google.maps.event.trigger(this.map, 'resize')
+    }
+  }
+
+
+
+
+  // =====================end of split screen=============
+
+
+  // ===================== FULLSCREEN =====================
+  /* handleFS = () => {
+     this.setState({ isFullScreen: !!document.fullscreenElement })
+   }
+    */
+
+  handleFS = () => {
+    const isFs = !!document.fullscreenElement
+
+    this.setState(prev => ({
+      isFullScreen: isFs,
+
+      // 🔥 auto-exit split when leaving fullscreen
+      isSplitView: isFs ? prev.isSplitView : false,
+    }))
+  }
+
+
+  toggleFullscreen = () => {
+    const el = document.getElementById('map-fullscreen-wrapper')
+    if (!el) return
+    if (document.fullscreenElement) document.exitFullscreen()
+    else el.requestFullscreen()
+  }
+
+  renderTripSummaryPanel = () => {
+
+    const trip = this.props.selectedTrips?.[0]
+    if (!trip) return null
+
+    const { stagedAddDocs, stagedRemoveDocs } = this.state
+
+    /*
+      const {
+          stagedAddDocs = [],
+          stagedRemoveDocs = [],
+        } = this.state
+
+
+
+
+    // 🔹 planned docs = effective docs MINUS staged removals
+    const plannedDocs = this.getEffectiveTripDocs().filter(
+      d => !stagedRemoveDocs.includes(d.docnum)
+    )
+    */
+    const plannedDocs = this.getEffectiveTripDocs()
+
+    const originalOrder = (this.props.geoData || []).map(d => d.docnum)
+const plannedOrder = (plannedDocs || []).map(d => d.docnum)
+
+const orderChanged =
+  originalOrder.length === plannedOrder.length &&
+  !originalOrder.every((doc, i) => doc === plannedOrder[i])
+
+    const hasChanges =
+      stagedAddDocs.length > 0 || stagedRemoveDocs.length > 0 || orderChanged
+
+
+    return (
+      <Card>
+        <CardBody>
+
+          <CardTitle>Trip Summary</CardTitle>
+          <div><b>Trip:</b> {trip.itemCode}</div>
+          <div><b>Vehicle:</b> {trip.vehicleObject.name || '-'}</div>
+          <div><b>Driver:</b> {trip.driverName || '-'}</div>
+          {trip.lock && (
+            <div style={{ color: '#dc2626', fontWeight: 'bold' }}>
+              🔒 Trip Locked
+            </div>
+          )}
+
+          {(() => {
+            const m = this.getLiveTripMetrics()
+
+            return (
+              <>
+                <div><b>Cases:</b> {m.cases} CS</div>
+                <div><b>Stops:</b> {m.stops}</div>
+                <div><b>Pallets:</b> {m.pallets} PAL</div>
+                <div><b>Capacity:</b> {m.capacity} KG</div>
+              </>
+            )
+          })()}
+
+          <hr />
+
+          <CardTitle>Route Stops</CardTitle>
+
+          {plannedDocs.map(d =>
+            this.renderDocRow(
+              d,
+              '#2563eb',
+              () => this.requestRemoveFromPanel(d)
+            )
+          )}
+
+
+          {hasChanges && (
+            <>
+              <hr />
+              <CardTitle>Pending Changes</CardTitle>
+
+              {/* ADDITIONS */}
+              {/* ADDITIONS */}
+              {stagedAddDocs.length > 0 && (
+                <>
+                  <div className="text-muted mb-1">➕ Added</div>
+                  {stagedAddDocs.map(d =>
+                    this.renderDocRow(
+                      d,
+                      '#d97706',
+                      () => this.undoAdd(d.docnum),
+                      true
+                    )
+                  )}
+                </>
+              )}
+
+              {/* DELETIONS */}
+              {stagedRemoveDocs.length > 0 && (
+                <>
+                  <div className="text-muted mt-2 mb-1">➖ Removed</div>
+                  {stagedRemoveDocs.map(d =>
+                    this.renderDocRow(
+                      d,
+                      '#dc2626',
+                      () => this.undoRemove(d.docnum),
+                      true
+                    )
+                  )}
+                </>
+              )}
+
+            </>
+          )}
+
+        </CardBody>
+
+        <div style={{ padding: '10px', textAlign: 'right' }}>
+          <Button
+            size="sm"
+            color="secondary"
+            disabled={!hasChanges}
+            onClick={() =>
+              this.setState({
+                stagedAddDocs: [],
+                pendingDoc: null,
+                pendingMarker: null,
+                stagedRemoveDocs: [],
+                pendingRemoveDoc: null
+              }, () => {
+                this.updateMarkers()
+                this.updateTripPolyline()
+              })
+            }
+          >
+            Discard
+          </Button>{' '}
+
+          <Button
+            size="sm"
+            color="primary"
+            disabled={!hasChanges}
+            onClick={this.confirmTrip}
+          >
+            Confirm Trip
+          </Button>
+        </div>
+      </Card>
+    )
+  }
+
+
+
+
+  // =========================confirmUpdatedTrip==========================
+
+  sum = (arr, key) =>
+    arr.reduce((t, x) => t + (Number(x[key]) || 0), 0)
+
+  countBy = (arr, predicate) =>
+    arr.filter(predicate).length
+
+  buildFinalSelectedTripData = () => {
+    const trip = this.props.selectedTrips?.[0]
+    if (!trip) return []
+
+    const originalDocs =
+      // trip.totalObject?.selectedTripData
+      //   ? [...trip.totalObject.selectedTripData]
+      //   : []
+      this.state.reorderedGeoData ||
+      trip.totalObject?.selectedTripData ||
+      [];
+
+
+
+    // 1️⃣ Remove deleted docs
+    let result = originalDocs.filter(
+      d =>
+        !this.state.stagedRemoveDocs.some(
+          r => r.docnum === d.docnum
+        )
+    )
+
+
+
+
+    // 2️⃣ Add staged docs (avoid duplicates)
+    this.state.stagedAddDocs.forEach(doc => {
+      if (!result.some(d => d.docnum === doc.docnum)) {
+        result.push({
+          ...doc,
+          tripno: trip.trips || '1',
+          panelType: 'drop',
+          itemCode: trip.itemCode,
+        })
+      }
+    })
+
+    // 3️⃣ Re-sequence (backend expects clean seq)
+    result = result.map((d, idx) => ({
+      ...d,
+      seq: idx + 1,
+    }))
+
+    return result
+  }
+
+
+
+  buildTripMetrics = (docs) => {
+    const drops = this.countBy(docs, d => d.panelType === 'drop')
+    const pickups = this.countBy(docs, d => d.panelType === 'pickup')
+
+    const totalWeight = this.sum(docs, 'netweight')
+    const totalVolume = this.sum(docs, 'volume')
+    const totalPallets = this.sum(docs, 'noofCases')
+
+    return {
+      drops: docs.length,
+      pickups,
+      stops: docs.length,
+      totalWeight: `${totalWeight.toFixed(2)} KG`,
+      totalVolume: `${totalVolume.toFixed(2)} M3`,
+      totalPallets: totalPallets.toFixed(2),
+      doc_capacity: totalWeight,
+      doc_volume: totalVolume,
+      doc_qty: docs.length,
+    }
+  }
+
+
+  buildFinalTripPayload = () => {
+    const trip = this.props.selectedTrips[0]
+
+    const finalDocs = this.buildFinalSelectedTripData()
+    const metrics = this.buildTripMetrics(finalDocs)
+
+    // 🔥 IMPORTANT: force NEW references
+    const updatedTotalObject = {
+      ...(trip.totalObject || {}),
+      selectedTripData: finalDocs, // 👈 NEW ARRAY
+    }
+
+
+    return {
+      ...trip,
+
+      // 🔥 SINGLE SOURCE OF TRUTH
+      dropObject: finalDocs,        // 👈 NEW ARRAY
+
+      totalObject: {
+        ...trip.totalObject,
+        selectedTripData: finalDocs, // backend MUST trust this
+      },
+      // 👈 NEW OBJECT
+
+      // 🔢 METRICS
+      ...metrics,
+
+      reorder: true,
+      forceSeq: false,
+      route: false,
+      lock: false,
+    }
+  }
+
+
+
+
+  resetRouteMapState = () => {
+    this.setState(
+      {
+        stagedAddDocs: [],
+        stagedRemoveDocs: [],
+        pendingDoc: null,
+        pendingMarker: null,
+        pendingRemoveDoc: null,
+        addConfirmShow: false,
+        warningflg: false,
+        removeConfirmShow: false,
+        reorderedGeoData: null
+      },
+      () => {
+        this.updateMarkers()
+        this.updateTripPolyline()
+        if (this.isListUiVisible()) {
+          this.initListSortable()
+        }
+      }
+    )
+  }
+
+
+
+  // confirmTrip = async () => {
+
+
+  //   const payload = this.buildFinalTripPayload()
+
+  //   // if (payload.) {
+
+  //   // }
+
+  //   try {
+  //     // 🔥 wait for backend
+  //     await this.props.finalUpdatedTrip(payload)
+
+  //     // ✅ EXIT FULLSCREEN
+  //     this.exitFullscreenIfNeeded()
+
+  //     // ✅ reset staged UI
+  //     this.resetRouteMapState()
+
+  //     //  toast.success('Trip updated successfully')
+
+  //   } catch (e) {
+  //     console.error(e)
+  //     toast.error('Trip update failed')
+  //   }
+
+  // }
+
+  confirmTrip = async () => {
+
+    const trip = this.props.selectedTrips[0]
+
+    const finalDocs = this.buildFinalSelectedTripData()
+    const metrics = this.buildTripMetrics(finalDocs)
+
+
+    // -------------------------------
+    // keep your message structure
+    // -------------------------------
+    let mess = ''
+
+    if (metrics.doc_capacity > trip.vehicleObject.capacities) {
+      mess += `Trip Weight (${Number(metrics.doc_capacity).toFixed(2)} KG) exceeds the vehicle’s maximum weight capacity (${trip.vehicleObject.capacities} KG). \n`
+    }
+
+    if (metrics.doc_volume > trip.vehicleObject.vol) {
+      mess += `Trip Volume (${Number(metrics.doc_volume).toFixed(2)} M3) exceeds the vehicle’s maximum volume capacity (${trip.vehicleObject.vol} M3). \n`
+    }
+
+    if (metrics.totalPallets > trip.vehicleObject.maxqty) {
+      mess += `Trip total Pallets (${metrics.totalPallets} PAL) exceeds the vehicle’s maximum pallets capacity (${trip.vehicleObject.maxqty} PAL). \n`
+    }
+
+    // -------------------------------
+    // show modal and STOP execution
+    // -------------------------------
+    if (mess) {
+      this.setState({
+        addTripConfirmShow: true,
+        confirmMessage: `${mess} Are you sure you want to continue ?`,
+        tripConfirmPending: true
+      })
+
+      return   // ⛔ stop here
+    }
+
+    // no warning → continue directly
+    await this.submitFinalTrip()
+  }
+
+  onTripConfirmYes = async () => {
+    this.setState(
+      {
+        addTripConfirmShow: false,
+        tripConfirmPending: false
+      },
+      async () => {
+        await this.submitFinalTrip()
+      }
+    )
+  }
+
+  onTripConfirmNo = () => {
+    this.setState({
+      addTripConfirmShow: false,
+      tripConfirmPending: false
+    })
+  }
+
+  submitFinalTrip = async () => {
+    const payload = this.buildFinalTripPayload()
+
+    try {
+      // 🔥 wait for backend
+      await this.props.finalUpdatedTrip(payload)
+      // ✅ EXIT FULLSCREEN
+      this.exitFullscreenIfNeeded()
+      // ✅ reset staged UI
+      this.resetRouteMapState()
+    } catch (e) {
+      console.error(e)
+      toast.error('Trip update failed')
+    }
+  }
+
+
+
+  exitFullscreenIfNeeded = () => {
+    if (document.fullscreenElement) {
+      document.exitFullscreen()
+    }
+  }
+
+
+  displayBadge = (typeMvt, iSeq) => {
+    const docmvt = typeMvt
+    const Seq = iSeq + 1
+    if (docmvt === 'PICK')
+      return (
+        <h5>
+          <td width="3%" class="priority">
+            <span class="badge badge-primary text-uppercase">{Seq}</span>
+          </td>
+        </h5>
+      )
+    if (docmvt === 'DLV')
+      return (
+        <h5>
+          <td width="3%" class="priority">
+            <span class="badge badge-success ">{Seq}</span>
+          </td>
+        </h5>
+      )
+    if (docmvt === 'PRECEIPT')
+      return (
+        <h5>
+          <td width="3%" class="priority">
+            <span class="badge badge-warning text-uppercase">{Seq}</span>
+          </td>
+        </h5>
+      )
+    if (docmvt === 'RETURN')
+      return (
+        <h5>
+          <td width="3%" class="priority">
+            <span class="badge badge-warning text-uppercase">{Seq}</span>
+          </td>
+        </h5>
+      )
+    return null
+  }
+
+
+
+
+  onDocClick = (product, docNum, doctype) => {
+    this.setState({
+      addProductShow: true,
+      products: product,
+      docNumber: docNum,
+      doctype: doctype,
+    })
+  }
+
+  displayPriority = (drop) => {
+    if (drop.priority === 10) {
+      return (
+        <h6>
+          <span class="badge badge-primary text-uppercase">Normal</span>
+        </h6>
+      )
+    } else if (drop.priority === 40) {
+      return (
+        <h6>
+          <span class="badge badge-success text-uppercase">Urgent</span>
+        </h6>
+      )
+    } else if (drop.priority === 80) {
+      return (
+        <h6>
+          <span class="badge badge-danger text-uppercase">Critical</span>
+        </h6>
+      )
+    }
+    return (
+      <h6>
+        <span class="badge badge-primary text-uppercase">Normal</span>
+      </h6>
+    )
+  }
+
+
+  displayRouteTag = (drop, lang) => {
+    const myStr = drop.routeColor || ''
+    const subStr = myStr.match('background-color:(.*)')
+    const s = (subStr && subStr[1]) || '#ccc'
+    if (lang === 'eng') {
+      return (
+        <h6>
+          <span style={{ backgroundColor: s }}>{drop.routeTag}</span>
+        </h6>
+      )
+    }
+    return (
+      <h6>
+        <span style={{ backgroundColor: s }}>{drop.routeTagFRA}</span>
+      </h6>
+    )
+  }
+
+  displayRouteTypeDocBadge = (typDoc, pDropPairedDoc) => {
+    const RouteMvt = typDoc
+    const dropPairedDoc = pDropPairedDoc || ''
+    if (RouteMvt === 'PICK') {
+      return (
+        <h5>
+          <td width="3%">
+            <span class="badge badge-primary text-uppercase">
+              {this.props.t('PICK')}
+            </span>
+          </td>
+        </h5>
+      )
+    }
+    if (RouteMvt === 'DLV') {
+      if ((dropPairedDoc || '').length > 1) {
+        return (
+          <h5>
+            <td width="3%">
+              <span class='badge badge-info style="font-size:2rem'>
+                {this.props.t('DLVEXCHANGE')}
+              </span>
+            </td>
+          </h5>
+        )
+      }
+      return (
+        <h5>
+          <td width="3%">
+            <span class='badge badge-success style="font-size:2rem'>
+              {this.props.t('DLV')}
+            </span>
+          </td>
+        </h5>
+      )
+    }
+    if (RouteMvt === 'PRECEIPT') {
+      return (
+        <h5>
+          <td width="3%">
+            <span class="badge badge-danger text-uppercase">
+              {this.props.t('PRECEIPT')}
+            </span>
+          </td>
+        </h5>
+      )
+    }
+    if (RouteMvt === 'RETURN') {
+      return (
+        <h5>
+          <td width="3%">
+            <span class="badge badge-danger text-uppercase">
+              {this.props.t('RETURN')}
+            </span>
+          </td>
+        </h5>
+      )
+    }
+    return null
+  }
+
+
+  displayDeliverableStatus = (docnum) => {
+    let status = 'NA'
+      ; (this.props.currDropsPanel?.drops || []).forEach((drop) => {
+        if (drop.docnum === docnum) {
+          if (drop.dlvflg === '1') status = 'No'
+          else if (drop.dlvflg === '2' || drop.dlvflg === '3') status = 'Yes'
+          else status = 'NA'
+        }
+      })
+    return (
+      <h5>
+        {status === 'Yes' ? (
+          <td width="3%">
+            <span class="badge badge-success text-uppercase">{status}</span>
+          </td>
+        ) : (
+          <td width="3%">
+            <span class="badge badge-danger text-uppercase">{status}</span>
+          </td>
+        )}
+      </h5>
+    )
+  }
+
+  // ===================== RENDER =====================
+  render() {
+    const { t } = this.props
+    const addProductsClose = () => this.setState({ addProductShow: false })
+    return (
+      <React.Fragment>
+        {/* ================= TOP / LIST / TABLE SECTION ================= */}
+        {/* ⚠️ NO UI CHANGES HERE — uses existing layout & CSS */}
+        <div
+          className="routeMapOuter"
+          style={{
+            height: this.state.isFullScreen ? '100vh' : '460px',
+            overflowX: 'hidden',
+            overflowY: 'hidden',
+          }}
+        >
+          <Row>
+            <Col md="12">
+              {/* Existing search, filters, table, list view */}
+              {this.props.children}
+            </Col>
+          </Row>
+
+
+          {/* ================= MAP / LIST TOGGLE ================= */}
+          <Row className="mt-2">
+            <Col md="6" className="text-left">
+              <div
+                style={{
+                  position: 'absolute',
+
+                  left: 10,
+                  zIndex: 5,
+                  background: '#fff',
+                  padding: '6px 10px',
+                  borderRadius: 4,
+                  boxShadow: '0 1px 4px rgba(0,0,0,0.2)'
+                }}
+              >
+                <label style={{ margin: 0 }}>
+                  <input
+                    type="checkbox"
+                    checked={this.state.showToPlanDocs}
+                    onChange={() =>
+                      this.setState(
+                        prev => ({ showToPlanDocs: !prev.showToPlanDocs }),
+                        () => this.updateMarkers()
+                      )
+                    }
+                  />{' '}
+                  Show To-Plan
+                </label>
+              </div>
+            </Col>
+            <Col md="6" className="text-right">
+              <ButtonGroup>
+                <Button
+                  size="sm"
+                  disabled={this.state.isSplitView}
+                  color={this.state.isMap ? 'primary' : 'secondary'}
+                  onClick={this.showMap}
+                >
+                  {t('Map')}
+                </Button>
+                <Button
+                  size="sm"
+                  color={this.state.isList ? 'primary' : 'secondary'}
+                  disabled={this.state.isSplitView}
+                  onClick={this.showList}
+                >
+                  {t('List')}
+                </Button>
+              </ButtonGroup>
+            </Col>
+          </Row>
+
+          {/* ================= MAP VIEW ================= */}
+
+          <Row className="mt-2">
+            <Col md="12">
+              <div
+                id="map-fullscreen-wrapper"
+                style={{
+                  display: this.state.isMap ? 'flex' : 'none',
+                  flexDirection: this.state.isSplitView ? 'column' : 'row',
+                  position: 'relative',
+
+                  // 🔥 FIX
+                  height: this.state.isFullScreen
+                    ? '100vh'
+                    : this.state.isSplitView
+                      ? '460px'
+                      : '460px',
+                }}
+              >
+                {/* ▶ Trip Summary Toggle Button */}
+                {this.state.isFullScreen && (
+                  <Button
+                    size="sm"
+                    onClick={this.toggleTripPanel}
+                    style={{
+                      position: 'absolute',
+                      top: '50%',
+                      left: 0,
+                      zIndex: 20,
+                      borderRadius: '0 6px 6px 0',
+                      background: '#1c2fc4',
+                      color: '#fff',
+                      transform: 'translateY(-50%)'
+                    }}
+                  >
+                    {this.state.isTripPanelOpen ? '<' : '>'}
+                  </Button>
+                )}
+
+                <div
+                  id="google-map"
+                  style={{
+                    width: '100%',
+                    height: this.state.isSplitView
+                      ? `${this.state.splitMapHeightPct}%`
+                      : '100%',
+                  }}
+                />
+
+                {this.state.isSplitView && this.state.isFullScreen && (
+                  <div
+                    onMouseDown={this.startSplitResize}
+                    style={{
+                      position: 'absolute',
+                      left: 0,
+                      right: 0,
+                      top: `${this.state.splitMapHeightPct}%`,
+                      transform: 'translateY(-50%)',
+                      height: '12px',
+                      cursor: 'row-resize',
+                      zIndex: 30,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
+                  >
+                    <div
+                      style={{
+                        width: '100%',
+                        height: '2px',
+                        background: '#1c2fc4',
+                        opacity: 0.8,
+                      }}
+                    />
+                  </div>
+                )}
+
+                {/* 🔥 SPLIT LIST VIEW (FULLSCREEN) */}
+                {this.state.isSplitView && this.state.isFullScreen && (
+                  <div
+                    style={{
+                      width: '100%',
+                      height: `${100 - this.state.splitMapHeightPct}%`,
+                      background: '#fff',
+                      overflowY: 'auto',
+                    }}
+                  >
+                    {this.renderListView()}
+                  </div>
+                )}
+
+
+                {/* SPLITSCREEN BUTTON (existing behavior) */}
+                <Button
+                  size="sm"
+                  onClick={this.toggleSplitFullscreen}
+                  style={{
+                    position: 'absolute',
+                    top: 10,
+                    right: 120,
+                    zIndex: 10,
+                    background: this.state.isSplitView ? '#16a34a' : '#1c2fc4',
+                    border: '1px solid #ccc',
+                    boxShadow: '0 1px 4px rgba(0,0,0,0.3)',
+                    color: '#fff',
+                  }}
+                >
+                  ⧉ Split
+                </Button>
+
+
+                {/* FULLSCREEN BUTTON (existing behavior) */}
+                <Button
+                  size="sm"
+                  onClick={this.toggleFullscreen}
+                  style={{
+                    position: 'absolute',
+                    top: 10,
+                    right: 10,
+                    zIndex: 10,
+                    background: '#1c2fc4',
+                    border: '1px solid #ccc',
+                    boxShadow: '0 1px 4px rgba(0,0,0,0.3)',
+                  }}
+                >
+                  {this.state.isFullScreen ? '⤢ Exit' : '⤢ Fullscreen'}
+                </Button>
+
+                {this.state.isFullScreen && this.state.isTripPanelOpen && (
+                  <div
+                    style={{
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      width: '320px',
+                      height: '100%',
+                      background: '#fff',
+                      zIndex: 15,
+                      boxShadow: '2px 0 10px rgba(0,0,0,0.3)',
+                      overflowY: 'auto',
+                      padding: '10px'
+                    }}
+                  >
+                    {this.renderTripSummaryPanel()}
+                  </div>
+                )}
+              </div>
+            </Col>
+          </Row>
+
+
+          {/* ================= LIST VIEW ================= */}
+
+          {this.state.isList && !this.state.isFullScreen && (
+            this.renderListView()
+          )}
+        </div>
+
+        {/* ================= MODALS / POPUPS (unchanged) ================= */}
+        {this.state.multiDragConfirmShow && (
+          <Modal
+            isOpen={this.state.multiDragConfirmShow}
+            container={document.getElementById('map-fullscreen-wrapper')}
+            backdrop="static"
+            centered
+          >
+            <ModalHeader>
+              {t('Confirmation')}
+            </ModalHeader>
+            <ModalBody>
+              <p style={{ whiteSpace: 'pre-line' }}>
+                Multiple To-Plan documents share this location. Do you want to drag all documents with same coordinates or only this one?
+              </p>
+              <p>
+                <b>Total at same location:</b> {this.state.pendingSameCoordDocs.length}
+              </p>
+            </ModalBody>
+            <ModalFooter>
+              <Button color="primary" onClick={this.proceedMultiDropSkipValidation}>
+                Drag All 
+              </Button>
+              <Button color="info" onClick={this.proceedMultiDropSingle}>
+                Only This One
+              </Button>
+              <Button
+                color="secondary"
+                onClick={this.cancelMultiDrop}
+              >
+                Cancel
+              </Button>
+            </ModalFooter>
+          </Modal>
+        )}
+
+        {/* // To plan to Planned documents confirmation */}
+        {this.state.addConfirmShow && (
+          <Modal
+            isOpen={this.state.addConfirmShow}
+            container={document.getElementById('map-fullscreen-wrapper')}
+            backdrop="static"
+            centered
+          >
+            <ModalHeader>
+              {t('Confirmation')}
+            </ModalHeader>
+            <ModalBody>
+              <p style={{ whiteSpace: 'pre-line' }}>
+                {this.state.confirmMessage}
+              </p>
+            </ModalBody>
+
+            <ModalFooter>
+              {this.state.warningflg ? (
+                // ⚠️ ALERT MODE
+                <Button
+                  color="primary"
+                  onClick={() =>
+                    this.setState({
+                      addConfirmShow: false,
+                      pendingDoc: null,
+                      pendingMarker: null,
+                      pendingDropPoint: null,
+                      pendingSameCoordDocs: [],
+                      multiDragConfirmShow: false,
+                      warningflg: false,
+                    })
+                  }
+                >
+                  OK
+                </Button>
+              ) : (
+                // ✅ CONFIRM MODE
+                <>
+                  <Button color="primary" onClick={this.confirmAddToTrip}>
+                    Yes
+                  </Button>
+                  <Button color="secondary" onClick={this.confirmAddNo}>
+                    No
+                  </Button>
+                </>
+              )}
+            </ModalFooter>
+          </Modal>
+        )}
+
+        {/* // remove confirmation modal */}
+        {this.state.removeConfirmShow && (
+          //<Modal centered backdrop="static">
+          <Modal
+            isOpen={this.state.removeConfirmShow}
+            container={document.getElementById('map-fullscreen-wrapper')}
+            backdrop="static"
+            centered
+          >
+            <ModalHeader>
+              Remove Document
+            </ModalHeader>
+
+            <ModalBody>
+              Remove document <b>{this.state.pendingRemoveDoc?.docnum}</b> from trip?
+            </ModalBody>
+
+            <ModalFooter>
+              <Button color="danger" onClick={this.confirmRemove}>
+                Yes
+              </Button>
+              <Button
+                color="secondary"
+                onClick={() =>
+                  this.setState({ removeConfirmShow: false, pendingRemoveDoc: null })
+                }
+              >
+                No
+              </Button>
+            </ModalFooter>
+          </Modal>
+        )}
+
+        {/* Confirmation of trip */}
+        {this.state.addTripConfirmShow && (
+          <Modal
+            isOpen={this.state.addTripConfirmShow}
+            container={document.getElementById('map-fullscreen-wrapper')}
+            backdrop="static"
+            centered
+          >
+            <ModalHeader toggle={() => this.setState({ addTripConfirmShow: false })}>
+              {t('Confirmation')}
+            </ModalHeader>
+            <ModalBody>
+              <p style={{ whiteSpace: 'pre-line' }}>
+                {this.state.confirmMessage}
+              </p>
+            </ModalBody>
+
+            <ModalFooter>
+              {this.state.warningflg ? (
+                // ⚠️ ALERT MODE
+                <Button
+                  color="primary"
+                  onClick={() =>
+                    this.setState({
+                      addTripConfirmShow: false,
+                      warningflg: false,
+                    })
+                  }
+                >
+                  OK
+                </Button>
+              ) : (
+                // ✅ CONFIRM MODE
+                <>
+                  <Button color="primary" onClick={this.onTripConfirmYes}>
+                    Yes
+                  </Button>
+                  <Button color="secondary" onClick={this.onTripConfirmNo}>
+                    No
+                  </Button>
+                </>
+              )}
+            </ModalFooter>
+          </Modal>
+        )}
+        <DisplayProducts
+          show={this.state.addProductShow}
+          onHide={addProductsClose}
+          products={this.state.products}
+          docNum={this.state.docNumber}
+          doctype={this.state.doctype}
+        />
+        <DeleteConfirm
+          show={this.state.addConfirmDeleteShow}
+          onHide={this.onConfirmDeleteNo}
+          confirmDelete={this.onConfirmDeleteYes}
+          index={this.state.index}
+          docnum={this.state.docnum}
+          confirmMessage={this.state.confirmMessage}
+        ></DeleteConfirm>
+        <ToastContainer />
+      </React.Fragment>
+    )
+  }
+}
+
+// ===================== EXPORT =====================
+export default withNamespaces()(RouteMap)

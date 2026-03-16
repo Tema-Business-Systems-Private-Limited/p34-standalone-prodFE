@@ -110,7 +110,7 @@ class IndividualRouteMap3 extends React.Component {
     buildContent = (place) => {
 
         // const url = "https://tms.tema-systems.com/syracuse-main/html/main.html?url=/trans/x3/erp/BURV12PRD_BPRPROD/$sessions?f=GESSDH/2/M/" + place.docnum;
-        const url = `${process.env.REACT_APP_X3_URL}/$sessions?f=GESSDH/2//M/` + place.docnum;
+        const url = `${process.env.REACT_APP_X3_URL_EXTERNAL}/$sessions?f=GESSDH/2//M/` + place.docnum;
         return (
             <div id="content">
                 <div id="siteNotice"></div>
@@ -123,7 +123,6 @@ class IndividualRouteMap3 extends React.Component {
     }
 
     updateMap = () => {
-        console.log("insdie updatemap of indiv map3")
         document.getElementById('google-map1').innerHTML = "";
         if (this.props.markers !== undefined && this.props.markers.length > 0) {
             var centerLocation = this.props.markers[0];
@@ -178,7 +177,6 @@ class IndividualRouteMap3 extends React.Component {
             this.customControl(centerControlDiv, map1);
             map1.controls[window.google.maps.ControlPosition.TOP_RIGHT].push(centerControlDiv);
             markerArray.map((place) => {
-                console.log("inside map",place);
                 var marker = null;
                 if (place.id !== undefined) {
                     DepartureSite = place.id;
@@ -251,12 +249,12 @@ class IndividualRouteMap3 extends React.Component {
                 var url = "";
                 var content;
                 if (place.doctype == 'PRECEIPT') {
-                    url = `${process.env.REACT_APP_X3_URL}/$sessions?f=GESXX10CPTH/2//M/` + place.docnum;
+                    url = `${process.env.REACT_APP_X3_URL_EXTERNAL}/$sessions?f=GESXX10CPTH/2//M/` + place.docnum;
                     content = `<DisplayMapInfo data={place} type={place.doctype}
                                   OncloseClick={OncloseClick} />`
                 }
                 else if (place.doctype == 'DLV') {
-                    url = `${process.env.REACT_APP_X3_URL}/$sessions?f=GESSDH/2//M/` + place.docnum;
+                    url = `${process.env.REACT_APP_X3_URL_EXTERNAL}/$sessions?f=GESSDH/2//M/` + place.docnum;
                     content = `<div id='content'>
                                 <div id='siteNotice'></div>
                                  <div id = 'bodyContent'>
@@ -289,12 +287,12 @@ class IndividualRouteMap3 extends React.Component {
 
                 }
                 else if (place.doctype == 'PICK') {
-                    url = `${process.env.REACT_APP_X3_URL}/$sessions?f=GESPRH2/2//M/` + place.docnum;
+                    url = `${process.env.REACT_APP_X3_URL_EXTERNAL}/$sessions?f=GESPRH2/2//M/` + place.docnum;
                     content = "<div id='content'><div id='siteNotice'></div><div id = 'bodyContent'><a href=" + url + " target='_blank'>" + place.docnum + "</a></br>" + place.bpname + "</br>" + place.poscode + " - " + place.city + "</div></div>";
 
                 }
                 else {
-                    url = `${process.env.REACT_APP_X3_URL}/$sessions?f=GESFCY/2//M/` + place.docnum;
+                    url = `${process.env.REACT_APP_X3_URL_EXTERNAL}/$sessions?f=GESFCY/2//M/` + place.docnum;
                     content = "<div id='content'><div id='siteNotice'></div><div id = 'bodyContent'><a href=" + url + " target='_blank'>" + SiteCode + "," + place.docnum + "</a></br>" + place.city + "</div></div>";
 
                 }
@@ -319,7 +317,6 @@ class IndividualRouteMap3 extends React.Component {
 
 
     render() {
-       console.log("inside addupdateTrip",this.props.geoData);
         let addProductsClose = () => this.setState({ addProductShow: false });
         let Productlist_win_Close = () => this.setState({ ShowDetailList: false });
         let addNotesClose = () => this.setState({ enableDocumnetMsgWindow: false });

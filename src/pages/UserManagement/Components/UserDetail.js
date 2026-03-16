@@ -228,6 +228,43 @@ function UserForm({ selectedUser, onSave, onCancel, selectedUserDetails, availab
     }));
   };
 
+  const buildEmptySite = (existingSite = {}, index = 0) => ({
+    ...existingSite,
+    fcy: '',
+    role: '',
+    defflg: '0',
+    lineno: existingSite.lineno || (index + 1) * 1000,
+    upddattim: new Date().toISOString()
+  });
+
+  const handleSiteCancel = (index) => {
+    setUser((prev) => {
+      const totalSites = prev.alignedSites.length;
+
+      if (totalSites <= 1) {
+        const clearedSites = prev.alignedSites.map((site, i) =>
+          i === index ? buildEmptySite(site, i) : site
+        );
+
+        return {
+          ...prev,
+          alignedSites: clearedSites
+        };
+      }
+
+      const filteredSites = prev.alignedSites.filter((_, i) => i !== index);
+      return {
+        ...prev,
+        alignedSites: filteredSites
+      };
+    });
+
+    setErrors((prev) => ({
+      ...prev,
+      alignedSites: ''
+    }));
+  };
+
   const validateForm = () => {
     const newErrors = {};
     const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
@@ -768,7 +805,7 @@ function UserForm({ selectedUser, onSave, onCancel, selectedUserDetails, availab
           </div>
           <div className="custom-divider"></div>
 
-          <Table responsive bordered className="mt-3">
+          <Table responsive bordered className="mt-3" style={{ tableLayout: 'fixed', width: '100%' }}>
             <thead>
               <tr>
                 <th style={{ background: '#CCD6DB' }}>Site ID <span className="text-danger">*</span></th>
@@ -779,7 +816,7 @@ function UserForm({ selectedUser, onSave, onCancel, selectedUserDetails, availab
             <tbody>
               {user.alignedSites.map((site, index) => (
                 <tr key={index}>
-                  <td>
+                  <td style={{ width: '35%' }}>
                     <FormGroup className="mb-0">
                       <CustomInput
                         type="select"
@@ -811,8 +848,10 @@ function UserForm({ selectedUser, onSave, onCancel, selectedUserDetails, availab
                       )}
                     </FormGroup>
                   </td>
-                  <td>{availableSites.find((s) => s.id === site.fcy)?.value || ''}</td>
-                  <td className="align-middle">
+                  <td style={{ width: '40%', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    {availableSites.find((s) => s.id === site.fcy)?.value || ''}
+                  </td>
+                  <td className="align-middle" style={{ width: '25%' }}>
                     <div className="d-flex align-items-center gap-2">
                       <CustomInput
                         type="radio"
@@ -828,10 +867,7 @@ function UserForm({ selectedUser, onSave, onCancel, selectedUserDetails, availab
                       <Button
                         color="danger"
                         size="sm"
-                        onClick={() => {
-                          const updatedSites = user.alignedSites.filter((_, i) => i !== index);
-                          setUser((prev) => ({ ...prev, alignedSites: updatedSites }));
-                        }}
+                        onClick={() => handleSiteCancel(index)}
                       >
                         Cancel
                       </Button>

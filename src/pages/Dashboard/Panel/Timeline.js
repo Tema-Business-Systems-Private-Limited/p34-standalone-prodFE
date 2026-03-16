@@ -27,7 +27,8 @@ import {
     Form,
 } from "reactstrap";
 import classnames from "classnames";
-
+import { ToastContainer, toast } from 'react-toastify'
+import 'react-toastify/dist/ReactToastify.css'
 
 import 'date-fns';
 import DateFnsUtils from '@date-io/date-fns';
@@ -83,6 +84,7 @@ function Timeline(props) {
     // const [currentStartTime, setCurrentStartTime] = React.useState(date);
     const [modalTimeMessage, setModalTimeMessage] = React.useState('');
     const [autooptimise, setAutooptimise] = React.useState(true);
+    const [validations, setValidations] = React.useState(true);
 
 
 
@@ -97,9 +99,18 @@ function Timeline(props) {
 
     var lang = "en";
 
+    const notifySucess = (message) => toast.success(message, { autoClose: 3000 })
+
+    const notifyError = (message) => toast.error(message, { autoClose: 3000, style: { zIndex: 1050 } })
+
     const onchangeSwitch = () => {
         let autoop = autooptimise;
         setAutooptimise(!autooptimise);
+    }
+
+    const onchangeValidationsSwitch = () => {
+        let valid = validations;
+        setValidations(!validations);
     }
 
     const costCalculation = (vehiclePanel, totalTime, totalDistance, code) => {
@@ -223,424 +234,21 @@ function Timeline(props) {
 
     const checkOptimse = (data) => {
 
-    if(props.codeExecution) {
+        if (props.isTripModified) {
+            notifyError('Please confirm the trip prior to optimising it in order to save the changes.')
+            return;
+        }
 
+          // TOM TOM
             optimizeRoute(data);
 
-    }
-    else {
+             // next billions
+        //  props.manualNextBillions(data, selectedDate, validations, autooptimise);
 
-        props.manualNextBillions(data, selectedDate, autooptimise);
-
-    }
-
-
+            // osrm - carrebiean
+      //  props.OSRM_manuallytrip(data, selectedDate, validations, autooptimise);
 
     }
-
-
-      const optimizeRouteWaypoints = (data) => {
-
-            if (data.driverId !== undefined && data.driverId !== "") {
-                setLoader(true);
-                let siteLat;
-                let siteLang;
-                let arrSiteLat;
-                let arrSiteLang;
-
-                props.sites.map((site) => {
-                    if (props.data.depSite === site.id) {
-                        siteLat = site.lat;
-                        siteLang = site.lng;
-                    }
-                    if (props.data.arrSite === site.id) {
-                        arrSiteLat = site.lat;
-                        arrSiteLang = site.lng;
-                    }
-                })
-
-                let apiurl;
-                let jsonUrl;
-
-
-                apiurl = "https://api.tomtom.com/routing/1/waypointOptimization?key=ctZzLlfGUpaNdfHiIobOeub8NBzzGkNG";
-
-
-
-                let prevTripsDist = 0;
-                let prevTripsTime = 0;
-                var summaryData = [];
-                var optiindex = [];
-                let serviceTime = [];
-                let waitingTime = [];
-                let lanLat = siteLat + ',' + siteLang;
-                let waypoints = [];
-                let orderConstraints = [];
-                let pickupIds = new Map();
-                let tempdata = {
-                 id: "start_depot",
-                 point: { latitude: siteLat, longitude: siteLang }
-                }
-                 let tempdataend = {
-                                 id: "end_depot",
-                                 point: { latitude: siteLat, longitude: siteLang }
-                                }
-                waypoints.push(tempdata);
-               data.totalObject.selectedTripData.forEach((tripData) => {
-                   if (Object.keys(tripData).length > 0 && tripData.doctype !== 'BREAK') {
-                       let jobId = `job_${tripData.docnum}`;
-                       waypoints.push({
-                           id: jobId,
-                           point: { latitude: tripData.lat, longitude: tripData.lng }
-                       });
-
-                       if (tripData.pairedDoc.length > 2) {
-                           let pairedId = `job_${tripData.pairedDoc}`;
-                           if (tripData.doctype === "PRECEIPT") {
-                               pickupIds.set(jobId, pairedId);
-                           } else if (tripData.doctype === "DLV") {
-                               orderConstraints.push({ beforeSet: [pairedId], afterSet: [jobId] });
-                           }
-                       }
-                   }
-               });
-
-             waypoints.push(tempdataend);
-
-               let requestPayload = {
-                   waypoints,
-                   fixedWaypoints: ["start_depot", "end_depot"],
-                   orderConstraints,
-                   routeType: "fastest",
-                   vehicleWeight: 30000,
-                   vehicleMaxSpeed: 80
-               };
-
-                //change end depo lan n lat below siteLat + ',' + siteLang
-              //  lanLat = lanLat + ':' + arrSiteLat + ',' + arrSiteLang
-              //  let url = apiurl + encodeURIComponent(lanLat) + jsonUrl;
-
-
-             let samplebodypayload =  {
-                "waypoints": [
-                  { "id": "start_depot", "point": { "latitude": 43.068433, "longitude": -95.909711 } },
-                  { "id": "job_SHPDH0010065", "point": { "latitude": 42.6385, "longitude": -95.196881 } },
-                  { "id": "job_PICDH0010477", "point": { "latitude": 42.6385, "longitude": -95.196881 } },
-                  { "id": "job_REC2503-00000154", "point": { "latitude": 42.589772, "longitude": -95.876725 } },
-                  { "id": "job_REC2503-00000150", "point": { "latitude": 42.589772, "longitude": -95.876725 } },
-                  { "id": "end_depot", "point": { "latitude": 43.068433, "longitude": -95.909711 } }
-                ],
-                "fixedWaypoints": ["start_depot", "end_depot"],
-                "orderConstraints": [
-                  { "beforeSet": ["job_REC2503-00000154"], "afterSet": ["job_SHPDH0010065"] }
-                ],
-                "routeType": "fastest",
-                "vehicleMaxSpeed": 80,
-                "travelMode": "car",
-                "vehicleWeight": 30000
-              }
-
-
-
-
-
-               fetch("https://api.tomtom.com/routing/waypointoptimization/1?key=ctZzLlfGUpaNdfHiIobOeub8NBzzGkNG", {
-                   method: "POST",
-                   headers: { "Content-Type": "application/json" },
-                   body: JSON.stringify(samplebodypayload)
-               }).then((res) => {
-
-                        if (res && res.optimizedWaypoints) {
-                            optiindex.push(res.optimizedWaypoints);
-                        }
-
-                        if (res && res.routes) {
-                            summaryData.push(res.routes);
-                        }
-                        let summaryResult = { "summarydata": [...summaryData], "serviceTime": serviceTime, "waitingTime": waitingTime }
-                        if (summaryResult && summaryResult.summarydata && summaryResult.serviceTime && summaryResult.waitingTime) {
-                            let summaryData = summaryResult.summarydata;
-                            let serviceTime = summaryResult.serviceTime;
-                            let waitingTime = summaryResult.waitingTime;
-                            let results = summaryData[0];
-                            if (results) {
-                                let legs = results[0].legs;
-                                if (props.data && legs && props.data.stops < results[0].legs.length) {
-                                    let dateformatter = (date, index) => {
-                                        let d = date.toDateString()
-                                        let t = date.toTimeString()
-                                        t = t.split(" ")[0]
-                                        return d + " " + t;
-                                    }
-                                    let resultsData = [];
-                                    var departure = new Date();
-                                    let optimisedTrips = [];
-                                    props.tripsPanel.map((tripData) => {
-                                        if ((tripData.optistatus === 'Optimized' || tripData.optistatus === 'optimized') && tripData.itemCode !== props.data.itemCode) {
-                                            optimisedTrips.push(tripData);
-                                        }
-                                    });
-                                    let currTripTimeHr = getHr;
-                                    let currTripTimeMin = getMin;
-                                    departure.setHours(Number(currTripTimeHr));
-                                    departure.setMinutes(Number(currTripTimeMin));
-                                    let sameTrips = [];
-                                    let startTimeInSec;
-                                    if (optimisedTrips.length > 0) {
-                                        optimisedTrips.map((optiTrip) => {
-                                            if (optiTrip.code === props.data.code) {
-                                                sameTrips.push(optiTrip);
-                                            }
-                                        })
-                                    };
-                                    let previousCheck = [];
-                                    props.tripsPanel.map((tripPanel) => {
-                                        if (tripPanel.code === props.data.code) {
-                                            if (tripPanel.trips === props.data.trips - 1) {
-                                                previousCheck.push(tripPanel)
-                                            }
-                                        }
-                                    })
-                                    let optimizationStatus = false;
-                                    if (previousCheck.length > 0) {
-                                        if (previousCheck[0].optistatus === 'Optimized') {
-                                            optimizationStatus = false;
-                                        } else {
-                                            optimizationStatus = true;
-                                        }
-                                    }
-
-                                    if (sameTrips.length > 0) {
-                                        let sameTripTime = []
-                                        sameTrips.map((times, index) => {
-                                            sameTripTime.push({ hr: times.endTime.split(":")[0], min: times.endTime.split(":")[1] })
-                                        });
-                                        sameTripTime.sort((a, b) => {
-                                            return Number(b.hr) - Number(a.hr)
-                                        })
-                                        if (sameTripTime.length > 0) {
-                                            currTripTimeHr = sameTripTime[0].hr;
-                                            currTripTimeMin = sameTripTime[0].min;
-                                            setHr(currTripTimeHr);
-                                            setMin(currTripTimeMin);
-
-                                            let sametripTime = formatTime(convertHrToSec(currTripTimeHr) + convertMinToSec(currTripTimeMin) + convertHrToSec(unLoadHrs) + convertHrToSec(loadHrs))
-                                            //departure.setHours(Number(currTripTimeHr) + 1);
-                                            let sametripHrs = sametripTime.split(':')[0];
-                                            let sametripMin = sametripTime.split(':')[1];
-                                            if (Number(getHr) >= Number(sametripHrs)) {
-                                                if (Number(getHr) == Number(sametripHrs) && Number(getMin) > Number(sametripMin)) {
-                                                    sametripHrs = getHr;
-                                                    sametripMin = getMin;
-                                                } else if (getHr > sametripHrs) {
-                                                    sametripHrs = getHr;
-                                                    sametripMin = getMin;
-                                                }
-                                            }
-                                            departure.setHours(Number(sametripHrs));
-                                            departure.setMinutes(Number(sametripMin));
-                                        }
-                                        //need to check
-                                        startTimeInSec = convertMinToSec(departure.getMinutes()) + convertHrToSec(departure.getHours());
-                                    } else {
-                                        startTimeInSec = convertMinToSec(departure.getMinutes()) + convertHrToSec(departure.getHours());
-                                    }
-                                    startTimeInSec = formatTime(startTimeInSec);
-                                    let startTimeHrs = startTimeInSec.split(':')[0];
-                                    let startTimeMins = startTimeInSec.split(':')[1];
-                                    departure.setHours(startTimeHrs);
-                                    departure.setMinutes(startTimeMins);
-
-                                    setHandleDateChange(departure)
-
-                                    let startTimeHr = departure.getHours();
-                                    let startTimeMin = departure.getMinutes();
-                                    let startTimeLocal = formatHrMin(startTimeHr) + ":" + formatHrMin(startTimeMin);
-                                    legs.forEach((data, index) => {
-                                        let time = data.summary.travelTimeInSeconds
-                                        let length = data.summary.lengthInMeters;
-                                        let sec = 0;
-                                        let waitSec = 0;
-                                        if (Number(serviceTime[index])) {
-                                            sec = sec + convertHrToSec(Number(serviceTime[index]))
-                                        } else {
-                                            sec = sec + 0;
-                                        }
-                                        if (Number(waitingTime[index])) {
-                                            waitSec = waitSec + convertHrToSec(Number(waitingTime[index]))
-                                        } else {
-                                            waitSec = waitSec + 0;
-                                        }
-                                        let serTime = formatTime(convertHrToSec(Number(serviceTime[index])));
-                                        let waitTime = formatTime(convertHrToSec(Number(waitingTime[index])));
-                                        serTime = serTime.split(':');
-                                        let serTimeHr = serTime[0];
-                                        let serTimeMin = serTime[1];
-                                        serTime = formatHrMin(serTimeHr) + ":" + formatHrMin(serTimeMin);
-
-                                        waitTime = waitTime.split(':');
-                                        let waitTimeHr = waitTime[0];
-                                        let waitTimeMin = waitTime[1];
-                                        waitTime = formatHrMin(waitTimeHr) + ":" + formatHrMin(waitTimeMin);
-
-                                        let res = {
-                                            start: dateformatter(departure, index),
-                                            distance: length / 1000,
-                                            time: convertSecToHr(time).toFixed(3),
-                                            serviceTime: serviceTime[index],
-                                            serTime: splitTime(serTime),
-                                            tTime: time,
-                                            tDistance: length
-                                        };
-                                        departure.setSeconds(departure.getSeconds() + time + sec + waitSec);
-                                        //added sersec+wait sec+time
-                                        let endTimeRoute = dateformatter(departure);
-                                        endTimeRoute = new Date(endTimeRoute);
-                                        let endTimeHr = endTimeRoute.getHours();
-                                        let endTimeMin = endTimeRoute.getMinutes();
-                                        endTimeRoute = (endTimeHr) + ':' + endTimeMin;
-                                        var a = endTimeRoute.split(':');
-                                        var endTimeSec = (+a[0]) * 60 * 60 + (+a[1]) * 60;
-                                        var arrivalTime = endTimeSec -
-                                            (Number(serviceTime[index]) * 60 * 60) - (Number(waitingTime[index]) * 60 * 60);
-                                        arrivalTime = formatTime(arrivalTime);
-                                        res.end = splitTime(endTimeRoute);
-                                        res.arrival = splitTime(arrivalTime);
-
-                                        res.startDate = props.date;
-                                        res.endDate = props.date
-                                        let latestEndDate = props.date
-                                        let latestStartDate = props.date
-                                        if (Number(arrivalTime.split(':')[0]) <=
-                                            Number(startTimeLocal.split(':')[0])) {
-                                            let dateNew = new Date(props.date);
-                                            let date1 = new Date(dateNew.setDate(dateNew.getDate() + 1));
-                                            latestStartDate = date1;
-                                        }
-                                        if (Number(endTimeRoute.split(':')[0]) <=
-                                            Number(startTimeLocal.split(':')[0])) {
-                                            let dateNew = new Date(props.date);
-                                            let date1 = new Date(dateNew.setDate(dateNew.getDate() + 1));
-                                            latestEndDate = date1;
-                                        }
-                                        res.endDate = latestEndDate;
-                                        res.startDate = latestStartDate;
-                                        resultsData.push(res);
-                                    });
-                                    let totTime = 0;
-                                    let totDistance = 0;
-                                    let endTime;
-                                    resultsData.map((data, index) => {
-                                        if (index === props.data.stops) {
-                                            endTime = data.end.split(':');
-                                            let endTimeHrs = endTime[0];
-                                            let endTimeMins = endTime[1];
-                                            let endLoadHrs = loadingSecs(Number(endTimeHrs), Number(endTimeMins))
-                                            endTime = endLoadHrs;
-                                            setEndTime(endTime);
-                                        }
-                                        totTime += data.tTime;
-                                        totDistance += data.tDistance;
-                                    });
-
-                                    let reducer1 = (accumulator, currentValue) => Number(accumulator) + Number(currentValue);
-                                    let serTime = serviceTime.reduce(reducer1);
-                                    let waitTime = waitingTime.reduce(reducer1)
-                                    let tTime = totTime;
-                                    totTime = formatTime(tTime + convertHrToSec(serTime) + convertHrToSec(waitTime));
-                                    setTotalTime(totTime);
-                                    setTotalDistance(totDistance / 1000);
-                                    let vehicleStartTime = '';
-                                    if (sameTrips.length > 0) {
-                                        sameTrips.map((sameTrip) => {
-                                            if (sameTrip.trips === 1) {
-                                                vehicleStartTime = sameTrip.startTime
-                                            }
-                                        })
-                                        prevTripsDist = sameTrips.reduce((sum, { totalDistance }) => sum + Number(totalDistance), 0);
-                                        prevTripsTime = sameTrips.reduce((sum, { totalTime }) => sum + convertHrToSec(Number(totalTime)), 0)
-                                    }
-                                    let tripsClosed = false;
-                                    if (vehicleStartTime.length > 0) {
-                                        let vehicleStartTimeDate = new Date();
-                                        vehicleStartTimeDate.setHours(Number(vehicleStartTime.split(':')[0]));
-                                        vehicleStartTimeDate.setMinutes(Number(vehicleStartTime.split(':')[1]));
-                                        let currentStartTimeDate = new Date();
-                                        currentStartTimeDate.setHours(Number(startTimeLocal.split(':')[0]))
-                                        currentStartTimeDate.setMinutes(Number(startTimeLocal.split(':')[1]))
-                                        if (vehicleStartTimeDate > currentStartTimeDate) {
-                                            tripsClosed = true;
-                                        } else {
-                                            tripsClosed = false;
-                                        }
-                                    }
-                                    prevTripsDist = prevTripsDist + (totDistance / 1000)
-                                    let totTimeSec = convertHrToSec(Number(totTime.split(':')[0])) + convertMinToSec(Number(totTime.split(':')[1]));
-                                    let maxTotTimeSec = convertHrToSec(Number(props.data.vehicleObject.maxtotaltime));
-                                    if (prevTripsDist >= props.data.vehicleObject.maxtotaldist
-                                        || prevTripsTime >= maxTotTimeSec
-                                        || optimizationStatus
-                                        || tripsClosed) {
-                                        if (prevTripsDist >= props.data.vehicleObject.maxtotaldist) {
-                                            setDistErrorMessage(`The vehicle cannot perform trip more than ${props.data.vehicleObject.maxtotaldist} KM, please review trip documents.`)
-                                            setDistError(true);
-                                        } else if (prevTripsTime >= maxTotTimeSec) {
-                                            setTimeErrorMessage(`The vehicle cannot perform trip more than ${props.data.vehicleObject.maxtotaltime} Hrs, please review trip documents.`)
-                                            setTimeError(true);
-                                        } else if (tripsClosed) {
-                                            setTripsClosedErrorMessage(`The Vehicle ${props.data.vehicleObject.codeyve} cant perform this Trip on ${moment(props.date).format('yyyy-MM-DD')} , Prev Trips covered whole Day. Use Another Vehicle or Schedule on Next Day`)
-                                            setTripClosedError(true);
-                                        } else if (optimizationStatus) {
-                                            setOptimizationMessage('Please optimize previous trip.');
-                                            setOptiStatusError(true);
-                                        }
-                                        setHandleDateChange(selectedDate)
-                                    } else {
-                                        let loadingHrs = convertHrToSec(loadHrs);
-                                        let tripData = {
-                                            tripCode: props.data.itemCode,
-                                            tripVehicle: props.data.code,
-                                            tripTotalTime: convertSecToHr(tTime + convertHrToSec(serTime) + convertHrToSec(waitTime) + loadingHrs),
-                                            tripTravelTime: formatTime(tTime),
-                                            tripTotalServiceTime: splitTime(serTime),
-                                            totalDistance: totDistance / 1000,
-                                            autoOptimised: autooptimise,
-
-                                        };
-                                        let routesSchedule = {
-                                            startDate: props.date,
-                                            endDate: props.date,
-                                            startTime: splitTime(startTimeLocal),
-                                            endTime: splitTime(endTime),
-                                            routesData: resultsData,
-                                            tripData: tripData,
-                                            trips: props.data,
-                                            cost: costCalculation(props.vehiclePanel, totTime, Math.round(totDistance / 1000), props.data.code)
-                                        }
-                                        let latestEndDate = props.date
-                                        if (Number(endTime.split(':')[0]) <=
-                                            Number(startTimeLocal.split(':')[0])) {
-                                            let dateNew = new Date(props.date);
-                                            let date1 = new Date(dateNew.setDate(dateNew.getDate() + 1));
-                                            latestEndDate = date1;
-                                        }
-                                        routesSchedule.endDate = latestEndDate;
-                                        props.getValues(routesSchedule, optiindex, autooptimise);
-                                    }
-                                }
-                            }
-                        }
-                    }).catch((error) =>  {
-
-                    })
-            } else{
-                setLoader(false);
-                setModelTime(true)
-                setModalTimeMessage('Please confirm the Trip before Optimizing')
-            }
-        };
-
-
 
     const optimizeRoute = (data) => {
 
@@ -667,11 +275,11 @@ function Timeline(props) {
 
             if (autooptimise) {
                 apiurl = 'https://api.tomtom.com/routing/1/calculateRoute/';
-                jsonUrl = `/json?computeBestOrder=true&routeRepresentation=summaryOnly&computeTravelTimeFor=all&avoid=unpavedRoads&travelMode=truck&vehicleMaxSpeed=${data.vehicleObject.maxspeed}&vehicleWeight=${data.vehicleObject.capacities}&vehicleLength=${((data.vehicleObject.length) / 100)}&vehicleWidth=${((data.vehicleObject.width) / 100)}&vehicleHeight=${((data.vehicleObject.heigth) / 100)}&vehicleCommercial=true&vehicleLoadType=otherHazmatGeneral&vehicleEngineType=combustion&key=ctZzLlfGUpaNdfHiIobOeub8NBzzGkNG`;
+                jsonUrl = `/json?computeBestOrder=true&routeRepresentation=summaryOnly&computeTravelTimeFor=all&traffic=true&routeType=fastest&travelMode=truck&vehicleCommercial=true&vehicleLoadType=otherHazmatGeneral&key=ctZzLlfGUpaNdfHiIobOeub8NBzzGkNG`;
 
             } else {
                 apiurl = 'https://api.tomtom.com/routing/1/calculateRoute/';
-                jsonUrl = `/json?computeBestOrder=false&routeRepresentation=summaryOnly&computeTravelTimeFor=all&routeType=shortest&avoid=unpavedRoads&travelMode=truck&vehicleMaxSpeed=${data.vehicleObject.maxspeed}&vehicleWeight=${data.vehicleObject.capacities}&vehicleLength=${((data.vehicleObject.length) / 100)}&vehicleWidth=${((data.vehicleObject.width) / 100)}&vehicleHeight=${((data.vehicleObject.heigth) / 100)}&vehicleCommercial=true&vehicleLoadType=otherHazmatGeneral&vehicleEngineType=combustion&key=ctZzLlfGUpaNdfHiIobOeub8NBzzGkNG`;
+                jsonUrl = `/json?computeBestOrder=false&routeRepresentation=summaryOnly&computeTravelTimeFor=all&traffic=true&routeType=fastest&travelMode=truck&vehicleCommercial=true&vehicleLoadType=otherHazmatGeneral&key=ctZzLlfGUpaNdfHiIobOeub8NBzzGkNG`;
             }
 
 
@@ -708,22 +316,22 @@ function Timeline(props) {
                             if (match !== null) {
                                 const errorLat = match[1]
                                 const errorLng = match[2]
-                            
+
                                 // Assuming data.totalObject.selectedTripData is an array of objects
 
                                 const tolerance = 0.0001; // Define your tolerance level
 
                                 const matchingDocNums = data.totalObject.selectedTripData
-                                    .filter(item => 
-                                        Math.abs(item.lat - errorLat) < tolerance && 
+                                    .filter(item =>
+                                        Math.abs(item.lat - errorLat) < tolerance &&
                                         Math.abs(item.lng - errorLng) < tolerance
                                     )
                                     // .map(item => item.docnum)
-                                    .map(item => `${item.bpcode} ${item.bpname} - ${item.docnum}`) 
+                                    .map(item => `${item.bpcode} ${item.bpname} - ${item.docnum}`)
                                     .join('\n'); // Join the array of docnums into a single string
 
                                 setOptimizeFailedDocuments(matchingDocNums)
-                            
+
                             } else if (match === null) {
                                 let bpcode = data.totalObject.selectedTripData[0].bpcode;
                                 let bpname = data.totalObject.selectedTripData[0].bpname;
@@ -1017,10 +625,10 @@ function Timeline(props) {
                             }
                         }
                     }
-                }).catch((error) =>  {
+                }).catch((error) => {
 
                 })
-        } else{
+        } else {
             setLoader(false);
             setModelTime(true)
             setModalTimeMessage('Please confirm the Trip before Optimizing')
@@ -1147,8 +755,8 @@ function Timeline(props) {
         if (lang === "en") {
             tomtitle = "Optimisation Details";
             details = {
-                "<b>Distance</b></br> Trip Distance": Math.round(totdis) + ' ' + distunts,
-                "Max Total Distance": data.vehicleObject.maxtotaldist + ' ' + distunts,
+                "<b>Distance</b></br> Trip Distance": Math.round(totdis) + ' ' + props?.data?.vehicleObject?.xmaxtotaldis,
+                "Max Total Distance": data.vehicleObject.maxtotaldist + ' ' + props?.data?.vehicleObject?.xmaxtotaldis,
 
 
                 "</br><b>Time</b></br>Trip Time": tottime,
@@ -1161,7 +769,7 @@ function Timeline(props) {
                 "</br><b>Volume</b></br>Total Volume": totvolume,
                 "Max Volume": data.vehicleObject.vol + ' ' + volunits,
 
-                "</br><b>Parameters</b></br>Max Speed": data.vehicleObject.maxspeed + ' ' + distunts + '/Hr',
+                "</br><b>Parameters</b></br>Max Speed": data.vehicleObject.maxspeed + ' ' + props?.data?.vehicleObject?.xmaxtotaldis + '/Hr',
                 "Vehicle Length": (Number(data.vehicleObject.length)) / 100 + ' Mts',
                 "Vehicle Width": (Number(data.vehicleObject.width)) / 100 + ' Mts',
                 "Vehicle Height": (Number(data.vehicleObject.heigth)) / 100 + ' Mts'
@@ -1170,8 +778,8 @@ function Timeline(props) {
         else {
             tomtitle = "Optimisation Details";
             details = {
-                "<b>Distance</b></br> Trip Distance": Math.round(totdis) + ' ' + distunts,
-                "Max Total Distance": data.vehicleObject.maxtotaldist + ' ' + distunts,
+                "<b>Distance</b></br> Trip Distance": Math.round(totdis) + ' ' + props?.data?.vehicleObject?.xmaxtotaldis,
+                "Max Total Distance": data.vehicleObject.maxtotaldist + ' ' + props?.data?.vehicleObject?.xmaxtotaldis,
 
 
                 "</br><b>Time</b></br>Trip Time": tottime,
@@ -1184,7 +792,7 @@ function Timeline(props) {
                 "</br><b>Volume</b></br>Total Volume": totvolume,
                 "Max Volume": data.vehicleObject.vol + ' ' + volunits,
 
-                "</br><b>Parameters</b></br>Max Speed": data.vehicleObject.maxspeed + ' ' + distunts + '/Hr',
+                "</br><b>Parameters</b></br>Max Speed": data.vehicleObject.maxspeed + ' ' + props?.data?.vehicleObject?.xmaxtotaldis + '/Hr',
                 "Vehicle Length": (Number(data.vehicleObject.length)) / 100 + ' Mts',
                 "Vehicle Width": (Number(data.vehicleObject.width)) / 100 + ' Mts',
                 "Vehicle Height": (Number(data.vehicleObject.heigth)) / 100 + ' Mts'
@@ -1273,7 +881,9 @@ function Timeline(props) {
                                 <tr>
                                     <th scope="row">{props.t('Distance')}</th>
                                     <td>{props.data.optistatus === "Open" ? '' :
-                                        props.data.totalDistance ? Math.round(Number(nullAndNanChecking(props.data.totalDistance, 'distance'))) + " " + distunts : ' '}</td>
+                                        // props.data.totalDistance ? parseFloat(nullAndNanChecking(props.data.totalDistance, 'distance')).toFixed(2) + " " + props?.data?.vehicleObject?.xmaxtotaldis : ' '}</td>
+
+                                        props.data.totalDistance ? Math.round(props.data.totalDistance) + " " + props?.data?.vehicleObject?.xmaxtotaldis : ' '}</td>
                                 </tr>
                                 <tr>
                                     <th scope="row">{props.t('Stops')}</th>
@@ -1282,7 +892,7 @@ function Timeline(props) {
                                 <tr>
                                     <th scope="row">{props.t('Cost')}</th>
                                     <td>{props.data.optistatus === "Open" ? '' :
-                                        props.data.totalCost ? Math.round(Number(nullAndNanChecking(props.data.totalCost, 'distance'))) + " " + currency : ' '}</td>
+                                        props.data.totalCost ? parseFloat(nullAndNanChecking(props.data.totalCost, 'distance')).toFixed(2) + " " + currency : ' '}</td>
                                 </tr>
                                 <tr>
                                     <th scope="row">{props.t('Details')}</th>
@@ -1302,13 +912,25 @@ function Timeline(props) {
                             onChange={onchangeSwitch}
                         />
                     </div>
+                    {/* <div>
+                        <span> <b>Exclude Validations </b>:</span>
+                        <Switch
+                            checked={validations}
+                            onChange={onchangeValidationsSwitch}
+                        />
+                    </div> */}
+
                     <div>
                         {(() => {
-                            if (props.data.tmsValidated) {
+                            if (props.data.lock) {
                             }
                             else {
                                 return (
-                                    <button style={{ fontSize: '12px', fontWeight: 'bold', marginRight: '20%', marginLeft: '20%' }}
+                                    <button
+                                        type="button"
+                                        class="btn btn-primary btn-sm mt-2"
+                                        style={{ fontSize: '12px', fontWeight: 'bold', marginRight: '20%', marginLeft: '20%' }}
+                                        // disabled={props.isTripModified}
                                         onClick={() => checkOptimse(props.data)}>
                                         OPTIMISATION
                                     </button>
@@ -1370,13 +992,13 @@ function Timeline(props) {
                         <DisplayInformationIconDetails
                             show={optimizationFailedStatus}
                             onInfoIconHide={warningWindowClose}
-                            data={(optimizeFailedDocuments === "" ? 
+                            data={(optimizeFailedDocuments === "" ?
                                 <>Optimization has failed because the following customers and pick tickets have missing or incorrect coordinates: <br />
-                                   {optimizeFailedDocuments}
-                                </> 
-                             :
+                                    {optimizeFailedDocuments}
+                                </>
+                                :
                                 <>Optimization has failed because the following customers and pick tickets have missing or incorrect coordinates: <br />
-                                   {optimizeFailedDocuments}
+                                    {optimizeFailedDocuments}
                                 </>
                             )}
                             warning={true}>

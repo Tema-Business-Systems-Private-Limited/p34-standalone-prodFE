@@ -48,8 +48,6 @@ class VrStops3 extends React.Component {
     render() {
         var lang = localStorage.getItem("lng");
         var trip = this.props.tripdetails;
-        console.log("trip", trip)
-        console.log("this.props.vedetail", this.props.vedetail)
         let distunts;
         /*
         if (lang == "en") {
@@ -62,7 +60,6 @@ class VrStops3 extends React.Component {
         if(this.props.sites && this.props.sites.length > 0) {
          this.props.sites.map((site) => {
                      if (trip.depSite === site.id) {
-                         console.log("2 site matched");
                           distunts = site.distunit;
                          }
                 })
@@ -90,7 +87,7 @@ class VrStops3 extends React.Component {
                                         <th>{this.props.t('Status')}</th>
                                         <th style={{'width':'180px'}} >{this.props.t('Arrival_Date')}<br /> {this.props.t('Time')}</th>
                                         <th style={{'width':'180px'}}>{this.props.t('Departure Date')}<br /> {this.props.t('Time')}</th>
-                                        <th>{this.props.t('ServiceTime')}</th>
+
                                         <th>Address</th>
                                         <th>Client Code</th>
                                         <th>{this.props.t('Client')}</th>
@@ -105,13 +102,13 @@ class VrStops3 extends React.Component {
                                         (this.props.vedetail || []).map((doc, i) => (
                                             <tr class="bg-blue" key={i}>
                                                 <td ></td>
-                                                <td><span className="LS-default">{doc.sequence}</span></td>
+                                                <td><span className="LS-default">{doc.sequence - 1}</span></td>
                                                 <td>{doc.sdhnum}</td>
                                                 <td>{doc.xdocSite}</td>
                                                 <td>{this.GetDeliveryStatus(doc.xdlv_status)}</td>
                                                 <td>{moment(doc.arrivedate).format('MM-DD-YYYY')}<br /> <small>{doc.arvtime}</small> </td>
                                                 <td>{moment(doc.departdate).format('MM-DD-YYYY')} <br /> <small>{doc.departtime}</small></td>
-                                                <td>{doc.servicetim}</td>
+
                                                 <td>{doc.adresname}</td>
                                                 <td>{doc.bpcord}</td>
                                                 <td>{doc.bprnam}</td>
@@ -123,22 +120,21 @@ class VrStops3 extends React.Component {
                                         )) :
                                         trip && trip.totalObject && trip.totalObject.selectedTripData &&
                                         trip.totalObject.selectedTripData.map((doc, i) => {
-                                            console.log("doccccc", doc)
                                             return (
                                                 <tr class="bg-blue" key={i}>
                                                     <td ></td>
                                                     <td><span className="LS-default">{i + 1}</span></td>
                                                     <td>{doc.docnum}</td>
                                                     <td>{doc.site}</td>
-                                                    <td>Scheduled</td>
-                                                    <td>{moment(doc.startDate).format('MM-DD-YYYY')}<br /> <small>{doc.arrival}</small> </td>
-                                                    <td>{moment(doc.endDate).format('MM-DD-YYYY')} <br /> <small>{doc.end}</small></td>
-                                                    <td>{doc.serTime}</td>
+                                                    <td></td>
+                                                    <td>{moment(doc.docdate).format('MM-DD-YYYY')}<br /> <small>{doc.arrival}</small> </td>
+                                                    <td>{moment(doc.docdate).format('MM-DD-YYYY')} <br /> <small>{doc.end}</small></td>
+
                                                     <td>{doc.adresname}</td>
                                                     <td>{doc.bpcode}</td>
                                                     <td>{doc.bpname}</td>
-                                                    <td>{doc.cty}</td>
-                                                    <td>{Math.round(doc.distance) + ' ' + distunts}</td>
+                                                    <td>{doc.city}</td>
+                                                    <td>{Math.round(doc.distance ? doc.distance : 0) + ' ' + distunts}</td>
                                                     <td>{formatTime(convertHrToSec(doc.time))}</td>
                                                     <td>{formatTime(convertHrToSec(doc.waitingTime))}</td>
                                                 </tr>

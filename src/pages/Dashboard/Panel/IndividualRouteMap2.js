@@ -17,10 +17,8 @@ class IndividualRouteMap2 extends React.Component {
     ];
     let depDetails = {};
     let arrDetails = {};
-    console.log("inside indiv map",this.props.tripsList);
     if (this.props.tripsList && this.props.vrdata && this.props.triplock == true)
     {
-    console.log("inside IndividualMap , lock");
       this.props.tripsList.map((tripList) => {
         if (tripList.code === this.props.vrdata.codeyve && this.props.vrdata.xnumpc === tripList.itemCode) {
           // points.push({})
@@ -43,8 +41,6 @@ class IndividualRouteMap2 extends React.Component {
       })
     }
     else if(this.props.bl_tripsList && this.props.bl_tripsList.lock == false) {
-      console.log("inside IndividualMap , unlock");
-      console.log("inside IndividualMap , unlock",this.props.bl_tripsList);
          this.props.sites.map((site) => {
             if (this.props.bl_tripsList.depSite === site.id) {
               depDetails.id = 0;
@@ -230,7 +226,7 @@ class IndividualRouteMap2 extends React.Component {
               {Object.keys(this.props.siteDetails).length > 0 && (
                 <GoogleMapReact
                   bootstrapURLKeys={{
-                    key: "AIzaSyAgLp4IWxgo22lGxq-gP7_0p2bDJA_tbcc",
+                    key: `${process.env.REACT_APP_GOOGLE_MAPS_API_KEY}`,
                     language: "en",
                     region: "US",
                   }}

@@ -17,8 +17,8 @@ class Confirm extends React.Component {
                         {this.props.warning ? 'Warning' : 'CONFIRMATION'}
                     </Modal.Title>
                 </Modal.Header>
-                <Modal.Body>
-                    {this.props.confirmMessage}
+                <Modal.Body >
+                    <span style={{fontSize: "25px"}}>{this.props.confirmMessage}</span>
                 </Modal.Body>
                 <Modal.Footer>
                     {this.props.warning ? '' : <button className='button-custom' onClick={() => this.props.confirmTrip(this.props.trip)}>{this.props.t('Yes')}</button>}

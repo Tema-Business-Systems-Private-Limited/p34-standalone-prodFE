@@ -44,8 +44,6 @@ class Drops3 extends React.Component {
 
 
     displayRouteTag = (drop, lang) => {
-        // console.log("T888 language =", lang);
-        // console.log("T888 drop =", drop);
 
         var myStr = drop.routeColor;
         var subStr = myStr.match("background-color:(.*)");
@@ -97,32 +95,32 @@ class Drops3 extends React.Component {
 
     displayPriority = (drop) => {
 
-        if(drop.priority === "10") {
+        if (drop.priority === 10) {
             return (
-                           <h6>
-                               <span class='badge badge-primary text-uppercase'>Normal</span>
-                           </h6>
-                       );
-        } else if(drop.priority === "40") {
-                             return (
-                                            <h6>
-                                                <span class='badge badge-success text-uppercase'>Urgent</span>
-                                            </h6>
-                                        );
-                         }
-        else if(drop.priority === "80") {
-                           return (
-                                          <h6>
-                                              <span class='badge badge-danger text-uppercase'>Critical</span>
-                                          </h6>
-                                      );
-                       }
+                <h6>
+                    <span class='badge badge-primary text-uppercase'>Normal</span>
+                </h6>
+            );
+        } else if (drop.priority === 40) {
+            return (
+                <h6>
+                    <span class='badge badge-success text-uppercase'>Urgent</span>
+                </h6>
+            );
+        }
+        else if (drop.priority === 80) {
+            return (
+                <h6>
+                    <span class='badge badge-danger text-uppercase'>Critical</span>
+                </h6>
+            );
+        }
         else {
-         return (
-                                     <h6>
-                                         <span class='badge badge-primary text-uppercase'>Normal</span>
-                                     </h6>
-                                 );
+            return (
+                <h6>
+                    <span class='badge badge-primary text-uppercase'>Normal</span>
+                </h6>
+            );
 
         }
 
@@ -133,20 +131,15 @@ class Drops3 extends React.Component {
 
 
     getBgcolor(type, docnum, doctype) {
-        // console.log("T1 inside bgcolor drop", this.props.trailerDropped + " ," + type + " ," + docnum + ", " + doctype);
         if (this.props.trailerDropped && type !== '' && (doctype === 'open' || doctype === 'Allocated')) {
-            // console.log("T1 drop if", this.props.trailerDropped);
             if (this.props.droppedTrailers && !this.props.droppedTrailers.includes(type)) {
-                // console.log("T1 inside if trailer doesn't exist drop");
                 return '';
             }
             else {
-                // console.log("T1 inside if else - Trailer matched drop");
                 return '#feff99';
             }
         }
         else {
-            // console.log("T1 drop no match else");
             return '';
         }
     }
@@ -181,12 +174,10 @@ class Drops3 extends React.Component {
 
     //add Rotuecode color
     displayRouteCodeColor = (routeCodeDesc, color) => {
-        // console.log("3 insdie carrier color");
         const RoutcodeDesc = routeCodeDesc;
         var myStr = color;
         var subStr = myStr.match("background-color:(.*)");
         var s = subStr[1];
-        // console.log("3 insdie carrier colored", s);
         return (
 
             <td> <h6> <span style={{ "backgroundColor": s }} >{RoutcodeDesc}</span> </h6></td>
@@ -213,12 +204,10 @@ class Drops3 extends React.Component {
 
     //add carrier color
     displayCarrierColor = (carrier, color) => {
-        // console.log("3 insdie carrier color");
         const carriername = carrier;
         var myStr = color;
         var subStr = myStr.match("background-color:(.*)");
         var s = subStr[1];
-        // console.log("3 insdie carrier colored", s);
         return (
 
             <td> <span style={{ "backgroundColor": s }} >{carriername}</span></td>
@@ -419,7 +408,6 @@ class Drops3 extends React.Component {
 
 
     SearchDrops = e => {
-        // console.log("search content= ", e.target.value);
         this.props.updateDropSearchTerm(e);
     }
 
@@ -433,68 +421,75 @@ class Drops3 extends React.Component {
 
         return (
             <TabPane tabId="Drops">
-                <div style={{ position: "relative" ,overflow:"hidden"}}>
-                <Row className="my-2">
-                    <Col md="4">
-                        <FormGroup className="mb-0" style={{ position: "sticky", top: "0", backgroundColor: "white", zIndex: "10" }}>
-                            <Input
-                                bsSize="sm"
-                                type="search"
-                                placeholder={this.props.t("SearchCaption")}
-                                className="form-control"
-                                onChange={this.SearchDrops}
-                            />
-                        </FormGroup>
-                    </Col>
-                </Row>
-                <div class="reportlist-view tableCustomFixHead">
-                    {/* <table class="table table-striped m-0">  */}
-                    <table class={"table table-sm " + (this.props.trailerDropped ? " " : this.props.dayschecked ? " " : "table-striped m-0")} style={{ height: '200px', display: 'block', overflow: 'auto' }}>
+                <div style={{ position: "relative", overflow: "hidden" }}>
+                    <Row className="my-2">
+                        <Col md="4">
+                            <FormGroup className="mb-0" style={{ position: "sticky", top: "0", backgroundColor: "white", zIndex: "10" }}>
+                                <Input
+                                    bsSize="sm"
+                                    type="search"
+                                    placeholder={this.props.t("SearchCaption")}
+                                    className="form-control"
+                                    onChange={this.SearchDrops}
+                                />
+                            </FormGroup>
+                        </Col>
+                    </Row>
+                    <div class="reportlist-view tableCustomFixHead">
+                        {/* <table class="table table-striped m-0">  */}
+                        <table class={"table table-sm " + (this.props.trailerDropped ? " " : this.props.dayschecked ? " " : "table-striped m-0")} style={{ height: '350px', display: 'block', overflow: 'auto' }}>
 
-                        <thead class="custom-sort" style={{ position: "sticky", top: "0", backgroundColor: "white", zIndex: "9" }}>
-                            <tr>
-                                <th>
+                            <thead class="custom-sort" style={{ position: "sticky", top: "0", backgroundColor: "white", zIndex: "9" }}>
+                                {/* <tr>
+                                    <th>
 
-                                </th>
-                                <th onClick={() => this.props.sortDrop('docnum', 0)}>
-                                    {this.props.t('Transaction No')} {this.props.dropOrder[0] === 1 ? "▼" : "▲"}
-                                </th>
-                                {this.props.dayschecked &&
-                                    <th>Document Date</th>
-                                }
-                                <th>
+                                    </th>
+                                    <th onClick={() => this.props.sortDrop('docnum', 0)}>
+                                        {this.props.t('Transaction')} {this.props.dropOrder[0] === 1 ? "▼" : "▲"}
+                                    </th>
+                                    {this.props.dayschecked &&
+                                        <th>Document Date</th>
+                                    }
+                                    <th onClick={() => this.props.sortDrop('bpcode', 1)}>
+                                        Customer {this.props.dropOrder[1] === 1 ? "▼" : "▲"}
+                                    </th>
+                                    <th onClick={() => this.props.sortDrop('bpname', 2)}>
+                                        {this.props.t('Name')} {this.props.dropOrder[2] === 1 ? "▼" : "▲"}
+                                    </th>
+                                    <th>
                                     {this.props.t('Preparation List')}
                                 </th>
-                                <th>
+                                    <th>
                                     {this.props.t('PairedDoc')}
                                 </th>
-                                <th onClick={() => this.props.sortDrop('doctype', 3)}>
+                                    <th>Deliverable Status</th>
+                                    <th onClick={() => this.props.sortDrop('doctype', 3)}>
                                     {this.props.t('Type')} {this.props.dropOrder[3] === 1 ? "▼" : "▲"}
                                 </th>
-                                <th>
+                                    <th onClick={() => this.props.sortDrop('noofCases', 13)}>
+                                        {this.props.t('Pallets')} {this.props.dropOrder[13] === 1 ? "▼" : "▲"}
+                                    </th>
+                                    <th onClick={() => this.props.sortDrop('mainCases', 14)}>
+                                        {this.props.t('Cases')} {this.props.dropOrder[14] === 1 ? "▼" : "▲"}
+                                    </th>
+                                    <th>
                                     {this.props.t('Delivery Address')}
                                 </th>
-                                <th onClick={() => this.props.sortDrop('routecode', 12)}>
-                                    {this.props.t('Route Code')} {this.props.dropOrder[12] === 1 ? "▼" : "▲"}
-                                </th>
-                                <th>
+                                    <th onClick={() => this.props.sortDrop('routeCode', 12)}>
+                                        {this.props.t('Route Code')} {this.props.dropOrder[12] === 1 ? "▼" : "▲"}
+                                    </th>
+                                    <th>
                                     Priority
                                 </th>
-                                <th onClick={() => this.props.sortDrop('bpcode', 1)}>
-                                    Client Code {this.props.dropOrder[1] === 1 ? "▼" : "▲"}
-                                </th>
-                                <th onClick={() => this.props.sortDrop('bpname', 2)}>
-                                    {this.props.t('Client')} {this.props.dropOrder[2] === 1 ? "▼" : "▲"}
-                                </th>
 
-                                <th onClick={() => this.props.sortDrop('poscode', 4)}>
-                                    Postal City {this.props.dropOrder[4] === 1 ? "▼" : "▲"}
-                                </th>
+                                    <th onClick={() => this.props.sortDrop('poscode', 4)}>
+                                        City {this.props.dropOrder[4] === 1 ? "▼" : "▲"}
+                                    </th>
 
-                                <th onClick={() => this.props.sortDrop('site', 9)}>
+                                    <th onClick={() => this.props.sortDrop('site', 9)}>
                                     {this.props.t('Site')} {this.props.dropOrder[9] === 1 ? "▼" : "▲"}
                                 </th>
-                                <th onClick={() => this.props.sortDrop('vehicleCode', 7)}>
+                                    <th onClick={() => this.props.sortDrop('vehicleCode', 7)}>
                                     {this.props.t('Vehicle')} {this.props.dropOrder[7] === 1 ? "▼" : "▲"}
                                 </th>
 
@@ -506,115 +501,194 @@ class Drops3 extends React.Component {
                                 </th>
 
                                 <th>{this.props.t('tripno')} </th>
-                                <th onClick={() => this.props.sortDrop('type', 8)}>
-                                    {this.props.t('Status')} {this.props.dropOrder[8] === 1 ? "▼" : "▲"}
-                                </th>
+                                    <th onClick={() => this.props.sortDrop('type', 8)}>
+                                        {this.props.t('Status')} {this.props.dropOrder[8] === 1 ? "▼" : "▲"}
+                                    </th>
 
 
-                                <th>
+                                    <th>
                                     {this.props.t('Add Code')}
                                 </th>
 
 
-                                {/* <th onClick = { () => this.props.sortDrop('netweight', 5)}>
+                                    <th onClick = { () => this.props.sortDrop('netweight', 5)}>
                                                                         Mass {this.props.dropOrder[5] === 1 ? "▼" : "▲"}
-                                                                    </th> */}
-                                {/* <th onClick = { () => this.props.sortDrop('volume', 6)}>
+                                                                    </th>
+                                    <th onClick = { () => this.props.sortDrop('volume', 6)}>
                                                                         Volume {this.props.dropOrder[6] === 1 ? "▼" : "▲"}
-                                                                    </th> */}
-                                <th>Deliverable Status</th>
-                                <th>{this.props.t('ServiceTime')}</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {(dropList || []).map((drops, i) => {
-                                let logisticDetails = {};
-                                logisticDetails.loadBay = drops.loadBay && drops.loadBay;
-                                logisticDetails.tailGate = drops.tailGate && drops.tailGate;
-                                logisticDetails.waitingTime = drops.waitingTime && formatTime(drops.waitingTime);
-                                logisticDetails.stackHeight = drops.stackHeight && nullAndNanChecking(drops.stackHeight);
-                                logisticDetails.timings = drops.timings && nullAndNanChecking(drops.timings);
-                                logisticDetails.packing = drops.packing && drops.packing;
-                                logisticDetails.height = drops.height && drops.height;
-                                logisticDetails.loadingOrder = drops.loadingOrder && drops.loadingOrder;
-                                return (
-                                    <tr id={'drops' + i}
-                                        className={this.dragStyle(drops.type, drops.dlvystatus, drops.docnum)}
-                                        draggable={(drops.type === 'open' || drops.type === 'Allocated') && (drops.dlvystatus === "8" || drops.dlvystatus === "0") && !this.props.selectedDocuments.includes(drops.docnum) ? "true" : "false"}
-                                        style={{ backgroundColor: this.props.trailerDropped ? this.getBgcolor(drops.trailer, drops.docnum, drops.type) : this.props.dayschecked ? this.defaultColor(this.props.dayschecked, drops.docdate, selectedDate) : '' }}
-                                        onDragStart={(event) =>
-                                            this.props.handleDragStart(event, drops, 'drops', i)
-                                        }
-                                        key={'drops' + i}
-                                    >
-                                        <td><img draggable="false" src="assets/img/drops.png" alt="drops" class="rounded-circle" width="50"></img></td>
-                                        <td>
-                                            {/* <span style= {{ cursor: 'pointer'}} onClick= {() => this.onDocClick(drops.products, drops.docnum)}>{drops.docnum}</span> */}
-                                            <span style={{ cursor: 'pointer' }} onClick={() => this.onDocClick(drops.products, drops.docnum, drops.doctype)}>{drops.docnum}</span>
-                                        </td>
-                                        {this.props.dayschecked &&
-                                            <td>{moment.tz(drops.docdate, '').format('DD-MM-YYYY')}</td>
-                                        }
+                                                                    </th>
+                                    <th>{this.props.t('ServiceTime')}</th>
+                                </tr> */}
 
-                                        <td>
+                                <tr>
+                                    <th>
+                                    </th>
+                                    <th onClick={() => this.props.sortDrop('docnum', 0)}>
+                                        {this.props.t('Transaction')}
+                                        <span style={{ color: this.props.dropOrder[0] === -1 ? 'gray' : 'black' }}>
+                                            {this.props.dropOrder[0] === 1 ? '▼' : '▲'}
+                                        </span>
+                                    </th>
+
+                                    {this.props.dayschecked && (
+                                        <th onClick={() => this.props.sortDrop('docdate', 8)}>
+                                            Document Date
+                                            <span style={{ marginLeft: '4px', color: this.props.dropOrder[8] === -1 ? 'gray' : 'black' }}>
+                                                {this.props.dropOrder[8] === 1 ? '▼' : '▲'}
+                                            </span>
+                                        </th>
+                                    )}
+
+                                    <th onClick={() => this.props.sortDrop('bpcode', 1)}>
+                                        Customer
+                                        <span style={{ color: this.props.dropOrder[1] === -1 ? 'gray' : 'black' }}>
+                                            {this.props.dropOrder[1] === 1 ? '▼' : '▲'}
+                                        </span>
+                                    </th>
+
+                                    <th onClick={() => this.props.sortDrop('bpname', 2)}>
+                                        {this.props.t('Name')}
+                                        <span style={{ color: this.props.dropOrder[2] === -1 ? 'gray' : 'black' }}>
+                                            {this.props.dropOrder[2] === 1 ? '▼' : '▲'}
+                                        </span>
+                                    </th>
+                                   <th onClick={() => this.props.sortDrop('addlig1', 8)}>
+                                                                          Delivery Address
+                                                                           <span style={{ color: this.props.dropOrder[2] === -1 ? 'gray' : 'black' }}>
+                                                                               {this.props.dropOrder[8] === 1 ? '▼' : '▲'}
+                                                                           </span>
+                                                                       </th>
+
+                                    <th onClick={() => this.props.sortDrop('noofCases', 3)}>
+                                        {this.props.t('Pallets')}
+                                        <span style={{ color: this.props.dropOrder[3] === -1 ? 'gray' : 'black' }}>
+                                            {this.props.dropOrder[3] === 1 ? '▼' : '▲'}
+                                        </span>
+                                    </th>
+
+                                    <th onClick={() => this.props.sortDrop('mainCases', 4)}>
+                                        {this.props.t('Cases')}
+                                        <span style={{ color: this.props.dropOrder[4] === -1 ? 'gray' : 'black' }}>
+                                            {this.props.dropOrder[4] === 1 ? '▼' : '▲'}
+                                        </span>
+                                    </th>
+
+                                    <th onClick={() => this.props.sortDrop('routeCode', 5)}>
+                                        {this.props.t('Route Code')}
+                                        <span style={{ color: this.props.dropOrder[5] === -1 ? 'gray' : 'black' }}>
+                                            {this.props.dropOrder[5] === 1 ? '▼' : '▲'}
+                                        </span>
+                                    </th>
+
+                                    <th onClick={() => this.props.sortDrop('city', 6)}>
+                                        City
+                                        <span style={{ color: this.props.dropOrder[6] === -1 ? 'gray' : 'black' }}>
+                                            {this.props.dropOrder[6] === 1 ? '▼' : '▲'}
+                                        </span>
+                                    </th>
+
+                                    <th onClick={() => this.props.sortDrop('dlvystatus', 7)}>
+                                        {this.props.t('Status')}
+                                        <span style={{ color: this.props.dropOrder[7] === -1 ? 'gray' : 'black' }}>
+                                            {this.props.dropOrder[7] === 1 ? '▼' : '▲'}
+                                        </span>
+                                    </th>
+
+                                </tr>
+
+                            </thead>
+                            <tbody>
+                                {(dropList || []).map((drops, i) => {
+                                    let logisticDetails = {};
+                                    logisticDetails.loadBay = drops.loadBay && drops.loadBay;
+                                    logisticDetails.tailGate = drops.tailGate && drops.tailGate;
+                                    logisticDetails.waitingTime = drops.waitingTime && formatTime(drops.waitingTime);
+                                    logisticDetails.stackHeight = drops.stackHeight && nullAndNanChecking(drops.stackHeight);
+                                    logisticDetails.timings = drops.timings && nullAndNanChecking(drops.timings);
+                                    logisticDetails.packing = drops.packing && drops.packing;
+                                    logisticDetails.height = drops.height && drops.height;
+                                    logisticDetails.loadingOrder = drops.loadingOrder && drops.loadingOrder;
+                                    return (
+                                        <tr id={'drops' + i}
+                                            className={this.dragStyle(drops.type, drops.dlvystatus, drops.docnum)}
+                                            draggable={(drops.type === 'open' || drops.type === 'Allocated') && drops.dlvystatus === "8" && !this.props.selectedDocuments.includes(drops.docnum) ? "true" : "false"}
+                                            style={{ backgroundColor: this.props.trailerDropped ? this.getBgcolor(drops.trailer, drops.docnum, drops.type) : this.props.dayschecked ? this.defaultColor(this.props.dayschecked, drops.docdate, selectedDate) : '' }}
+                                            onDragStart={(event) =>
+                                                this.props.handleDragStart(event, drops, 'drops', i)
+                                            }
+                                            key={'drops' + i}
+                                        >
+                                            <td><img draggable="false" src="assets/img/drops.png" alt="drops" class="rounded-circle" width="50"></img></td>
+                                            <td style={{ fontWeight: "bold", textDecorationLine: "underline" }}>
+                                                {/* <span style= {{ cursor: 'pointer'}} onClick= {() => this.onDocClick(drops.products, drops.docnum)}>{drops.docnum}</span> */}
+                                                <span style={{ cursor: 'pointer' }} onClick={() => this.onDocClick(drops.products, drops.docnum, drops.doctype)}>{drops.docnum}</span>
+                                            </td>
+                                            {this.props.dayschecked &&
+                                                <td>{moment.tz(drops.docdate, '').format('DD-MM-YYYY')}</td>
+                                            }
+                                            <td>{drops.bpcode}</td>
+                                            <td>{drops.bpname}</td>
+                                             <td>{drops.addlig1}</td>
+
+                                            {/* <td>
                                             {drops.prelistCode}
-                                        </td>
-                                        <td>
+                                        </td> */}
+                                            {/* <td>
                                             {drops.pairedDoc}
-                                        </td>
-                                        <td width="3%">{drops.doctype && this.displayRouteTag(drops, lang)}</td>
-                                        <td>{drops.adresname}</td>
-                                        <td>{drops.routeCodeDesc && this.displayRouteCodeColor(drops.routeCodeDesc, drops.routeColor)}</td>
-                                        <td>{this.displayPriority(drops)}</td>
-                                        <td>{drops.bpcode}</td>
-                                        <td>{drops.bpname}</td>
-                                        <td>{drops.poscode}, {drops.city}</td>
-                                        <td>{drops.site}</td>
-                                        <td>{drops.vehicleCode}</td>
+                                        </td> */}
+                                            {/* <td>{this.GetDeliverableStatus(drops.dlvflg)}</td> */}
+                                            {/* <td width="3%">{drops.doctype && this.displayRouteTag(drops, lang)}</td> */}
+                                            <td>{(parseFloat(drops.noofCases)).toFixed(2)} PAL</td>
+                                            <td>{(parseFloat(drops.mainCases))} CS</td>
+                                            {/* <td>{drops.adresname}</td> */}
+                                            <td>{drops.routeCodeDesc && this.displayRouteCodeColor(drops.routeCodeDesc, drops.routeColor)}</td>
+                                            {/* <td>{this.displayPriority(drops)}</td> */}
+                                            <td>{drops.poscode} {drops.city}</td>
+                                            {/* <td>{drops.site}</td> */}
+                                            {/* <td>{drops.vehicleCode}</td>
 
                                         <td>
                                             {drops.carrier && this.displayCarrierColor(drops.carrier, drops.carrierColor)}
                                         </td>
                                         <td>{drops.drivercode}</td>
 
-                                        <td>{drops.tripno === '0' ? "" : drops.tripno}</td>
-                                        <td>
-                                            {/* <span className= { this.colorStyle(drops.type) }>{drops.type}</span> */}
-                                            <td width="3%">{this.displayDropStatus(drops.type, drops.dlvystatus, drops.docnum)}</td>
-                                        </td>
-                                        <td>{drops.adrescode}</td>
+                                        <td>{drops.tripno === '0' ? "" : drops.tripno}</td> */}
+                                            <td>
+                                                {/* <span className= { this.colorStyle(drops.type) }>{drops.type}</span> */}
+                                                <td width="3%">{this.displayDropStatus(drops.type, drops.dlvystatus, drops.docnum)}</td>
+                                            </td>
+                                            {/* <td>{drops.adrescode}</td> */}
 
-                                        {/* <td>{drops.doctype ? drops.doctype : drops.movtype}</td> */}
+                                            {/* <td>{drops.doctype ? drops.doctype : drops.movtype}</td> */}
 
-                                        {/* <td>{drops.netweight} {drops.weightunit}</td>
+                                            {/* <td>{drops.netweight} {drops.weightunit}</td>
                                             <td>{drops.volume} {drops.volume_unit}</td> */}
 
-                                        <td>{this.GetDeliverableStatus(drops.dlvflg)}</td>
-                                        <td>
+                                            {/* <td>
                                             {formatTime(convertHrToSec(drops.serviceTime))}
-                                        </td>
-                                    </tr>
-                                )
-                            })}
-                        </tbody>
-                    </table>
+                                        </td> */}
+                                        </tr>
+                                    )
+                                })}
+                            </tbody>
+                        </table>
 
-                    <DisplayProducts
-                        show={this.state.addProductShow}
-                        onHide={addProductsClose}
-                        products={this.state.products}
-                        docNum={this.state.docNumber}
-                        doctype={this.state.doctype}
-                    ></DisplayProducts>
+                        <DisplayProducts
+                            show={this.state.addProductShow}
+                            onHide={addProductsClose}
+                            products={this.state.products}
+                            docNum={this.state.docNumber}
+                            doctype={this.state.doctype}
+                        ></DisplayProducts>
 
-                    <DisplayInformationIconDetails
-                        show={this.state.addInfoShow}
-                        onInfoIconHide={addInfoIconClose}
-                        data={this.state.logisticDetails}
-                        dataType="object"
-                        docNum={this.state.docNumber}
-                    ></DisplayInformationIconDetails>
-                </div>
+                        <DisplayInformationIconDetails
+                            show={this.state.addInfoShow}
+                            onInfoIconHide={addInfoIconClose}
+                            data={this.state.logisticDetails}
+                            dataType="object"
+                            docNum={this.state.docNumber}
+                        ></DisplayInformationIconDetails>
+                    </div>
                 </div>
             </TabPane>
         );

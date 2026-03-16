@@ -656,7 +656,7 @@ function RouteScheduler(props) {
         let details = ''
         let tomtitle = ''
         if (lang === "en") {
-         tomtitle = "Optimisation Details";
+         tomtitle = "Optimisation Detailsss";
         details = {
             "<b>Distance</b></br> Trip Distance": Math.round(totdis) + ' ' + distunts,
             "Max Total Distance": data.vehicleObject.maxtotaldist + ' ' + distunts,

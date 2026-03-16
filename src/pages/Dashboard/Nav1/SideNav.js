@@ -15,9 +15,9 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import HdrAutoIcon from '@mui/icons-material/HdrAuto';
 import DoneAllIcon from '@mui/icons-material/DoneAll';
 import RouteScheduler from "./RouteScheduler";
+import SyncAltIcon from '@material-ui/icons/SyncAlt';
 import "../dashboard.scss";
 import moment from "moment";
-import Switch from '@mui/material/Switch';
 import AlertNew from "../Panel/AlertNew";
 import { Container, Row, FormGroup, Input, Form } from "reactstrap";
 import Box from '@mui/material/Box';
@@ -30,6 +30,10 @@ import {
 import RouteIcon from '@mui/icons-material/Route';
 import LockIcon from '@mui/icons-material/Lock';
 import LockOpenIcon from '@mui/icons-material/LockOpen';
+import { ToastContainer, toast } from 'react-toastify'
+import 'react-toastify/dist/ReactToastify.css'
+import GroupDeleteModal from "../Panel/GroupDeleteModal";
+
 
 const StyledIconButton = styled(IconButton)(({ theme, bgcolor }) => ({
   backgroundColor: bgcolor || theme.palette.primary.main,
@@ -52,11 +56,12 @@ class SideNav extends React.Component {
       addAlertShow: false,
       errorMessage: "",
       msgtype: "",
-      type : "",
-      oldcode : this.props.oldcode,
+      type: "",
+      ShowSelectionList: false,
       confirmMessage: "",
       documents: this.props.defaultprocessDocs,
       sameVehicles: this.props.samevehicleChecked,
+      groupDeleteModalOpen: false,
     };
     this.onTagsChange = this.onTagsChange.bind(this);
   }
@@ -85,9 +90,7 @@ class SideNav extends React.Component {
   };
 
   onDateselection = (date) => {
-    console.log("T11 inside dateselection", date);
     const Seldate = moment(date[0]).format("YYYY-MM-DD");
-    console.log("T11 inside dateselection", Seldate);
     this.props.handleDateChange(Seldate);
   };
 
@@ -98,12 +101,11 @@ class SideNav extends React.Component {
     this.setState({
       addConfirmShow: false,
       msgtype: "",
-      type:"",
+      type: "",
     });
   };
 
   OnSameVehcheckBoxChange = () => {
-    console.log("T222 docpanel - to plan change");
     this.setState({ sameVehicles: !this.state.sameVehicles });
     this.props.OncheckedSameVehicles(!this.state.sameVehicles);
   };
@@ -116,19 +118,26 @@ class SideNav extends React.Component {
     this.props.grouplockTrips();
   };
 
+  handleGroupDelete = (selectedTripIds) => {
+  // Pass up to parent — adjust prop name to match your app
+  this.props.autoResetTrips(selectedTripIds);
+};
+
   onConfirmNo = () => {
-    console.log("inside confirm No");
     this.setState({
       addConfirmShow: false,
       msgtype: "",
-      type : "",
+      type: "",
     });
   };
 
+  notifyError = (message) => toast.error(message, { autoClose: 3000, style: { zIndex: 1050 } })
+
   onConfirmClick = (type) => {
-     console.log("on cofirm click ", type)
     let tripsList = this.props.tripsPanel;
 
+    var noDriverTrips = "";
+    var nonDeliverableDocsAtValidation = "";
     var Validatecount = 0;
     var Lockcount = 0;
     var OptimisedTrips = 0;
@@ -156,10 +165,23 @@ class SideNav extends React.Component {
 
     for (let i = 0; i < tripsList.length; i++) {
       var trip = tripsList[i];
-      if (trip.lock && !trip.tmsValidated) {
-        Validatecount = Validatecount + 1;
+      if (trip.driverId === "") {
+        noDriverTrips += trip.itemCode + '\n';
       }
-      if (!trip.lock && trip.optistatus === "Optimized") {
+      if (trip.lock && !trip.tmsValidated) {
+        // let nonDeliverableCount = 0;
+        // for (let ll = 0; ll < trip.docDetails?.length; ll++) {
+        //   let  doc = trip.docDetails[ll];
+        //   if (doc.documentStatus !== "Deliverable") {
+        //     nonDeliverableCount = nonDeliverableCount + 1;
+        //     nonDeliverableDocsAtValidation += doc.documentNo + '\n';
+        //   }
+        // }
+        // if (nonDeliverableCount === 0) { 
+        Validatecount = Validatecount + 1;
+        // }
+      }
+      if (!trip.lock && trip.optistatus === "Optimized" && trip.driverId !== "") {
         Lockcount = Lockcount + 1;
       }
       if (!trip.lock && trip.optistatus === "Open") {
@@ -173,81 +195,99 @@ class SideNav extends React.Component {
       }
     }
 
-    console.log("T333 tripsList =", tripsList);
-
     let mess = "";
     if (type === "1") {
-       console.log("1")
       if (DocCount > 0) {
-        console.log("confirm 1")
-//        mess = "Are you sure you want to confirm the auto-generation of the trips?";
-//        this.setState({
-//          addConfirmShow : true,
-//          confirmMessage: mess,
-//          msgtype: type,
-//          type : "success"
-//        });
+        //        mess = "Are you sure you want to confirm the auto-generation of the trips?";
+        //        this.setState({
+        //          addConfirmShow : true,
+        //          confirmMessage: mess,
+        //          msgtype: type,
+        //          type : "success"
+        //        });
         this.props.openPopupAuto(true);
       } else {
         this.setState({
           confirmMessage: "There are no documents available for trip creation.",
           addConfirmShow: true,
-          type : "error",
+          type: "error",
           msgtype: type,
         });
       }
     } else if (type === "2") {
-      if (Lockcount > 0) {
+          if (this.props.isTripModified) {
+      this.notifyError('Please confirm the modified trip prior to group locking trips in order to save the changes.')
+      return;
+    }
+      if (noDriverTrips !== "") {
+        mess = `The following trips don't have driver, Please assign driver before locking.  \n  ${noDriverTrips}`;
+        this.setState({
+          addConfirmShow: true,
+          confirmMessage: mess,
+          msgtype: type,
+          type: "error"
+        });
+      }
+      else if (Lockcount > 0) {
         mess = "Are you sure you want to lock the trip(s)?";
         this.setState({
           addConfirmShow: true,
           confirmMessage: mess,
           msgtype: type,
-           type : "success"
+          type: "success"
         });
       } else {
         this.setState({
-          confirmMessage : "There are no unlocked trips.",
+          confirmMessage: "There are no unlocked trips.",
           addConfirmShow: true,
-          type : "error",
-           msgtype: type
+          type: "error",
+          msgtype: type
         });
       }
     } else if (type === "3") {
+      // if (nonDeliverableDocsAtValidation !== "") {
+      //   this.setState({
+      //     confirmMessage: `The following documents in the trips are no in Deliverable status. \n ${nonDeliverableDocsAtValidation}`,
+      //     addConfirmShow: true,
+      //     msgtype: type,
+      //     type: "error",
+      //   });
+      // }
       if (Validatecount > 0) {
         mess = "Are you sure you want to validate the trip(s)?";
         this.setState({
-          addConfirmShow : true,
+          addConfirmShow: true,
           confirmMessage: mess,
           msgtype: type,
-           type : "success"
+          type: "success"
         });
       } else {
         this.setState({
           confirmMessage: "There are no trips available to validate.",
           addConfirmShow: true,
-           msgtype: type,
-          type : "error",
+          msgtype: type,
+          type: "error",
 
         });
       }
     } else if (type === "4") {
-      if (DeletedCount > 0) {
-        mess = "Are you sure you want to delete all the unlocked trip(s)?";
-        this.setState({
-          addConfirmShow: true,
-          confirmMessage: mess,
-          msgtype: type,
-           type : "success"
-        });
-      } else {
-        this.setState({
-              confirmMessage: "There are no trips available to delete.",
-          addConfirmShow: true,
-           msgtype: type,
-          type : "error"
-        });
-      }
+      // if (DeletedCount > 0) {
+      //   mess = "Are you sure you want to delete all the unlocked trip(s)?";
+      //   this.setState({
+      //     addConfirmShow: true,
+      //     confirmMessage: mess,
+      //     msgtype: type,
+      //     type: "success"
+      //   });
+      // } else {
+      //   this.setState({
+      //     confirmMessage: "There are no trips available to delete.",
+      //     addConfirmShow: true,
+      //     msgtype: type,
+      //     type: "error"
+      //   });
+      // }
+      this.setState({ groupDeleteModalOpen: true });
     } else if (type === "5") {
       if (OptimisedTrips > 0) {
         mess = "Are you sure you want to optimize the trip(s)?";
@@ -255,39 +295,38 @@ class SideNav extends React.Component {
           addConfirmShow: true,
           confirmMessage: mess,
           msgtype: type,
-           type : "success"
+          type: "success"
         });
       } else {
         this.setState({
           confirmMessage: "There are no trips available to optimize.",
           addConfirmShow: true,
-           msgtype: type,
-          type : "error"
+          msgtype: type,
+          type: "error"
         });
       }
     }
-     else if (type === "6") {
-          if (Validatecount > 0) {
-            mess = "Are you sure you want to unlock the trip(s)?";
-            this.setState({
-              addConfirmShow: true,
-              confirmMessage: mess,
-              msgtype: type,
-               type : "success"
-            });
-          } else {
-            this.setState({
-              confirmMessage: "There are no locked trips.",
-              addConfirmShow: true,
-               msgtype: type,
-              type : "error"
-            });
-          }
-        }
+    else if (type === "6") {
+      if (Validatecount > 0) {
+        mess = "Are you sure you want to unlock the trip(s)?";
+        this.setState({
+          addConfirmShow: true,
+          confirmMessage: mess,
+          msgtype: type,
+          type: "success"
+        });
+      } else {
+        this.setState({
+          confirmMessage: "There are no locked trips.",
+          addConfirmShow: true,
+          msgtype: type,
+          type: "error"
+        });
+      }
+    }
   };
 
   onConfirmYes = (type) => {
-    console.log("inside confirm YEs", type);
     if (type === "1") {
       // this.autoGeneratedRouteClick();
       this.props.openPopupAuto(true);
@@ -300,39 +339,31 @@ class SideNav extends React.Component {
     } else if (type === "5") {
       this.OnGroupOptimiseTrips();
     }
-     else if (type === "6") {
-              this.OnGroupUnlockTrips();
-       }
+    else if (type === "6") {
+      this.OnGroupUnlockTrips();
+    }
 
 
     //   this.props.confirmTrip(this.state.currentTrip, 'Open');
     this.setState({
       addConfirmShow: false,
-      confirmMessage : "",
+      confirmMessage: "",
       msgtype: "",
-      type : "",
+      type: "",
     });
   };
 
   OnGroupOptimiseTrips = () => {
-    console.log("TOOO inside optmise trip");
+    //  this.props.groupOptmiseTrips();
 
 
-
-   if(this.props.oldCode) {
-      this.props.groupOptmiseTrips();
-   }
-   else {
-      this.props.groupNextBillionsOptmiseTrips();
-   }
-
+    this.props.groupNextBillionsOptmiseTrips();
   };
 
 
-   OnGroupUnlockTrips = () => {
-        console.log("TOOO inside optmise trip");
-        this.props.groupunlockTrips();
-      };
+  OnGroupUnlockTrips = () => {
+    this.props.groupunlockTrips();
+  };
 
   OnGroupValidateTrips = () => {
     this.props.onValidateAll();
@@ -351,14 +382,12 @@ class SideNav extends React.Component {
 
   onGroupValidateYes = () => {
     this.props.onValidateAll();
-    console.log("GV - Yes confirm for group Valdiation");
     this.setState({
       addvalidateconfirmShow: false,
     });
   };
 
   // handleDocProcessChange = (event) => {
-  //   console.log("Changed Value =", event.target.value);
   //   this.props.onDocProcessChange(event.target.value);
   //   this.setState({
   //     documents: event.target.value,
@@ -367,7 +396,6 @@ class SideNav extends React.Component {
 
   handleDocProcessChange = (event) => {
     const value = event.target.value;
-    console.log("Changed Value =", value);
 
     // Allow only numeric values and restrict special characters
     if (/^\d*$/.test(value)) {
@@ -388,13 +416,6 @@ class SideNav extends React.Component {
       }
     }
   };
-
-
-  handleCodeChange = (e) => {
-   console.log("T222 data update",e)
-   console.log("T222 data update",!this.props.oldCode)
-    this.props.handleCodeExecution(!this.props.oldCode);
-  }
 
   render() {
     let optionItems = [];
@@ -451,13 +472,13 @@ class SideNav extends React.Component {
           </div>
           <div style={{ display: this.props.vehicleShow }}>
             <FormGroup className="Select2-date p-1 ml-1 col-md-2 col-lg-2 col-xl-2 mb-1">
-              <span style={{color:"#505D69",fontWeight:"bold"}}>Date </span>
+              <span style={{ color: "#505D69", fontWeight: "bold" }}>Date </span>
 
               <Flatpickr
 
                 className="form-control"
                 dateFormat="m/d/Y"
-                style={{ width: "auto",fontWeight:"bold" }}
+                style={{ width: "auto", fontWeight: "bold" }}
                 value={this.props.selectedDate}
                 onChange={this.onDateselection}
               />
@@ -476,96 +497,101 @@ class SideNav extends React.Component {
           </div>
 
           <div
-          //  className="SideNav_Btns"
+            //  className="SideNav_Btns"
             style={{
               alignSelf: "center",
-             // display : 'flex',
+              // display : 'flex',
 
               justifyContent: "space-between",
               display: this.props.vehicleShow,
             }}
           >
-   <Toolbar  style={{gap : '16px'}}>
-        <Tooltip
-         title={
-                <span style={{ fontSize: "1.25rem" /* 20px */ }}> Auto Generate Route </span> }
-         >
-           <IconButton style={{backgroundColor : "#4285F4"}}>
-            <HdrAutoIcon style={{ fontSize: 28, color: 'white'}}  onClick={() => this.onConfirmClick("1")} />
-          </IconButton>
-        </Tooltip>
-
-         <Tooltip title={
-                                  <span style={{ fontSize: "1.25rem" /* 20px */ }}> Group Optimise </span> }
-                           >
-                  <IconButton style={{backgroundColor : "#6B7280"}}>
-                    <RouteIcon style={{ fontSize: 28, color: 'white'}}  onClick={() => this.onConfirmClick("5")}/>
-                  </IconButton>
-                </Tooltip>
-
-        <Tooltip title={
-                                                   <span style={{ fontSize: "1.25rem" /* 20px */ }}> Group Lock </span> }
-                                            >
-           <IconButton style={{backgroundColor : "#34D399"}}>
-            <LockIcon style={{ fontSize: 28, color: 'white' }}  onClick={() => this.onConfirmClick("2")} />
-          </IconButton>
-        </Tooltip>
-
-        <Tooltip title={
-                                                   <span style={{ fontSize: "1.25rem" /* 20px */ }}> Group Unlock </span> }
-                                            >
-           <IconButton style={{backgroundColor : "#8B5CF6"}}>
-            <LockOpenIcon style={{ fontSize: 28, color: 'white' }}  onClick={() => this.onConfirmClick("6")} />
-          </IconButton>
-        </Tooltip>
-
-       <Tooltip title={
-                                                  <span style={{ fontSize: "1.25rem" /* 20px */ }}> Group Validate </span> }
-                                           >
-                 <IconButton style={{backgroundColor : "#F59E0B"}}>
-                  <DoneAllIcon style={{ fontSize: 28, color: 'white' }}   onClick={() => this.onConfirmClick("3")}/>
+            <Toolbar style={{ gap: '16px' }}>
+              <Tooltip
+                title={
+                  <span style={{ fontSize: "1.25rem" /* 20px */ }}> Auto Generate Route </span>}
+              >
+                <IconButton style={{ backgroundColor: "#4285F4" }}>
+                  <HdrAutoIcon style={{ fontSize: 28, color: 'white' }} onClick={() => this.onConfirmClick("1")} />
                 </IconButton>
               </Tooltip>
 
-        <Tooltip title={
-                                                   <span style={{ fontSize: "1.25rem" /* 20px */ }}> Group Delete Trips </span> }
-                                            >
-                  <IconButton style={{backgroundColor : "#EF4444    "}}>
-                   <DeleteIcon style={{ fontSize: 28, color: 'white' }}  onClick={() => this.onConfirmClick("4")} />
-                 </IconButton>
-               </Tooltip>
-             </Toolbar>
+              <Tooltip title={
+                <span style={{ fontSize: "1.25rem" /* 20px */ }}> Group Optimise </span>}
+              >
+                <IconButton style={{ backgroundColor: "#6B7280" }}>
+                  <RouteIcon style={{ fontSize: 28, color: 'white' }} onClick={() => this.onConfirmClick("5")} />
+                </IconButton>
+              </Tooltip>
+
+              <Tooltip title={
+                <span style={{ fontSize: "1.25rem" /* 20px */ }}> Group Lock </span>}
+              >
+                <IconButton style={{ backgroundColor: "#34D399" }}>
+                  <LockIcon style={{ fontSize: 28, color: 'white' }} onClick={() => this.onConfirmClick("2")} />
+                </IconButton>
+              </Tooltip>
+
+              <Tooltip title={
+                <span style={{ fontSize: "1.25rem" /* 20px */ }}> Group Unlock </span>}
+              >
+                <IconButton style={{ backgroundColor: "#8B5CF6" }}>
+                  <LockOpenIcon style={{ fontSize: 28, color: 'white' }} onClick={() => this.onConfirmClick("6")} />
+                </IconButton>
+              </Tooltip>
+
+              <Tooltip title={
+                <span style={{ fontSize: "1.25rem" /* 20px */ }}> Group Validate </span>}
+              >
+                <IconButton style={{ backgroundColor: "#F59E0B" }}>
+                  <DoneAllIcon style={{ fontSize: 28, color: 'white' }} onClick={() => this.onConfirmClick("3")} />
+                </IconButton>
+              </Tooltip>
+
+              <Tooltip title={
+                <span style={{ fontSize: "1.25rem" /* 20px */ }}> Group Delete Trips </span>}
+              >
+                <IconButton style={{ backgroundColor: "#EF4444    " }}>
+                  <DeleteIcon style={{ fontSize: 28, color: 'white' }} onClick={() => this.onConfirmClick("4")} />
+                </IconButton>
+              </Tooltip>
+            </Toolbar>
 
           </div>
 
-           <div style={{ display: this.props.vehicleShow  }}>
-                      <div
-                        className="refreshbtn"
-                        style={{ marginTop : "5px", paddingTop: "25px", paddingLeft: "25px" }}
-                      >
-                         <button
-                                      type="button"
-                                      class="btn btn-primary"
-                                      onClick={() =>  this.props.refreshAllPanels()}
-                                    >
-                                      Refresh
-                                    </button>
-                      </div>
+          <div style={{ display: this.props.vehicleShow, alignSelf: "center", }}>
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "16px",
+                marginLeft: "12px",
+                alignSelf: "center",
+              }}
+            >
 
-                    </div>
-                     <div style={{ display: this.props.vehicleShow  }}>
-                                          <div
-                                            className="refreshbtn"
-                                            style={{ marginTop : "5px", paddingTop: "25px", paddingLeft: "25px" }}
-                                          >
-                                            <Switch
-                                                  checked={this.props.oldCode}
-                                                  onChange={this.handleCodeChange}
-                                                  inputProps={{ 'aria-label': 'controlled' }}
-                                                />
-                                          </div>
+              <Tooltip title={<span style={{ fontSize: "1.1rem" }}>Sync Data</span>}>
+                <IconButton
+                  style={{
+                    display: this.props.vehicleShow,
+                    backgroundColor: "#0EA5E9",
+                  }}
+                  onClick={this.props.handleSyncTrips}
+                >
+                  <SyncAltIcon style={{ fontSize: 26, color: "white" }} />
+                </IconButton>
+              </Tooltip>
 
-                                        </div>
+
+              <button
+                type="button"
+                class="btn btn-primary"
+                onClick={() => this.props.refreshAllPanels()}
+              >
+                Refresh
+              </button>
+            </div>
+          </div>
           <div
             style={{
               display: this.props.vrShow,
@@ -587,13 +613,19 @@ class SideNav extends React.Component {
             </ul>
           </div>
         </Form>
+        <GroupDeleteModal
+  open={this.state.groupDeleteModalOpen}
+  onClose={() => this.setState({ groupDeleteModalOpen: false })}
+  tripsPanel={this.props.tripsPanel}
+  onConfirmDelete={this.handleGroupDelete}
+/>
         <AlertNew
           show={this.state.addConfirmShow}
           onClose={this.onConfirmNo}
           message={this.state.confirmMessage}
           onConfirm={this.onConfirmYes}
           msgtype={this.state.msgtype}
-          type = {this.state.type}
+          type={this.state.type}
         ></AlertNew>
       </>
     );

@@ -47,7 +47,7 @@ background:#ffffff;
 border-radius:0.25rem;
 box-shadow:0 0px 3px #c9c9c9;
 border:1px solid #c9c9c9;
-height:36vh;
+height:100%;
 }
 
 
@@ -532,7 +532,7 @@ body {
 
 .tablheight {
     overflow: auto;
-    height: 31.633vh !important;
+    height: 400px !important;
     }
 
 
@@ -551,3 +551,157 @@ body {
   font-weight: bold;
 }
 
+.map-normal {
+  position: relative;
+}
+
+.map-fullscreen {
+  position: fixed !important;
+  top: 0;
+  left: 0;
+  width: 100vw !important;
+  height: 100vh !important;
+  background: #fff;
+  z-index: 9999;
+}
+
+/* ================= MAP TOOLBAR ================= */
+.map-toolbar {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 20;
+}
+
+.map-expand-btn {
+  width: 36px;
+  height: 36px;
+
+  background: #fff;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+
+  cursor: pointer;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+}
+
+.map-expand-btn i {
+  font-size: 16px;
+  color: #111;
+}
+
+.map-expand-btn:hover {
+  background: #f3f4f6;
+}
+
+
+
+/* Main popup container */
+.gm-style-iw {
+  padding: 0 !important;
+  border-radius: 12px !important;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.18) !important;
+}
+
+/* Inner wrapper */
+.gm-style-iw-d {
+  overflow: hidden !important;
+  background: #fff;
+}
+
+/* Global font */
+.gm-style-iw-d * {
+  font-family: "Inter", "Segoe UI", Roboto, Arial, sans-serif;
+  box-sizing: border-box;
+}
+
+/* Header (Customer name) */
+.gm-style-iw-d b:first-of-type {
+  display: block;
+  background: linear-gradient(135deg, #1e3c72, #2a5298);
+  color: #fff;
+  padding: 8px 12px;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  border-bottom: 1px solid rgba(255,255,255,0.2);
+}
+
+/* Body container */
+.gm-style-iw-d div {
+  padding: 8px 12px;
+  font-size: 12.5px;
+  color: #2c2c2c;
+}
+
+/* Each row styling */
+.gm-style-iw-d div b:not(:first-of-type) {
+  font-weight: 600;
+  color: #111;
+}
+
+/* Label text */
+.gm-style-iw-d div b::before {
+  font-weight: 500;
+}
+
+/* Row spacing */
+.gm-style-iw-d br {
+  display: block;
+  content: "";
+  margin: 4px 0;
+}
+
+/* Compact spacing for text */
+.gm-style-iw-d div {
+  line-height: 1.35;
+  // font-weight: bold;
+  font-weight: 300;
+}
+
+/* Button */
+.gm-style-iw-d button {
+  width: calc(100% - 16px);
+  margin: 6px 8px 10px;
+  padding: 7px 0;
+  border: none;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #ff4b4b, #d32f2f);
+  color: #fff;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.gm-style-iw-d button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 10px rgba(211,47,47,0.4);
+}
+
+/* Remove Google default close button background */
+.gm-ui-hover-effect {
+  background: transparent !important;
+  border-radius: 50%;
+}
+
+/* Close icon styling */
+.gm-ui-hover-effect span {
+  background-color: #444 !important;
+}
+
+
+
+/* Improve badge look inside InfoWindow */
+.gm-style-iw-d .badge {
+  padding: 4px 10px;      /* inner spacing */
+  font-size: 10px;     /* slightly bigger text */
+  border-radius: 12px;   /* pill-style feel */
+  font-weight: 500;
+  line-height: 1.2;
+}

@@ -366,11 +366,11 @@ export default class UserManagement extends Component {
           this.notifyError("Failed to delete user");
           this.setState({ loader: false });
         }
-      });
+      });                      
   };
 
-  onCancel = () => {
-    this.setState({
+  onCancel = () => {         
+    this.setState({                                         
       detailuser: "none",
       listusers: "block",
       selectedUser: '',

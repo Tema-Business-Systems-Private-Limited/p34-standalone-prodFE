@@ -456,7 +456,7 @@ class Pickups3 extends React.Component {
                                         key={'pickup' + i}
                                     >
                                         <td><img draggable="false" src="assets/img/pickup.png" alt="drops" class="rounded-circle" width="50"></img></td>
-                                        <td>
+                                        <td style={{fontWeight: "bold", textDecorationLine: "underline"}}>
                                             <span style={{ cursor: 'pointer' }} onClick={() => this.onDocClick(pickup.products, pickup.docnum, pickup.doctype)}>{pickup.docnum}</span>
                                         </td>
                                         {this.props.dayschecked &&

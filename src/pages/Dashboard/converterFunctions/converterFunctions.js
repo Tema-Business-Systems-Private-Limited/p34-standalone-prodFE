@@ -1,5 +1,5 @@
 export const convertHrToSec = (hr) => {
-    return hr * 60 * 60;
+    return Math.round(hr * 60 * 60);
 }
 
 export const convertMinToSec = (min) => {
@@ -14,10 +14,31 @@ export const convertHrToMin = (hr) => {
     return Number(hr) * 60;
 }
 
+export const convertHHMMtoSeconds = (timeStr) => {
+  if (typeof timeStr !== "string" || timeStr.length !== 4) return 0;
 
+  const hours = parseInt(timeStr.substring(0, 2), 10);
+  const minutes = parseInt(timeStr.substring(2, 4), 10);
 
+  if (isNaN(hours) || isNaN(minutes)) return 0;
+
+  return (hours * 3600) + (minutes * 60);
+};
 
 export const secondsToHms = (d) => {
+    d = Number(d);
+
+    // Round UP to nearest minute
+    const totalMinutes = Math.ceil(d / 60);
+
+    const h = Math.floor(totalMinutes / 60);
+    const m = totalMinutes % 60;
+
+    return formatHrMin1(h) + ':' + formatHrMin1(m);
+}
+
+
+export const secondsToHms_floor = (d) => {
     d = Number(d);
     var h = Math.floor(d / 3600);
     var m = Math.floor(d % 3600 / 60);
@@ -94,20 +115,15 @@ export const  tConvert = (time) => {
 if(time && time.length > 0) {
 
  if (time && time.length === 4) {
-         console.log("AM PM tconvert inside if ",time);
          time = '0' + time;
-          console.log("AM PM tconvert insder after if ",time);
      };
   // Check correct time format and split into components
-   console.log("AM PM tconvert ",time);
   time = time.toString ().match (/^([01]\d|2[0-3])(:)([0-5]\d)(:[0-5]\d)?$/) || [time];
- console.log("AM PM tconvert after ",time);
   if (time.length > 1) { // If time format correct
     time = time.slice (1);  // Remove full string match value
     time[5] = +time[0] < 12 ? 'AM' : 'PM'; // Set AM/PM
     time[0] = +time[0] % 12 || 12; // Adjust hours
   }
-  console.log("AM PM tconvert after if",time);
   return time.join (''); // return adjusted time or original string
   }
 }

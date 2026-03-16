@@ -16,7 +16,6 @@ import Alert from './Alert';
 import { convertHrToSec, splitTime, nullAndNanChecking } from '../converterFunctions/converterFunctions';
 import { withNamespaces } from 'react-i18next';
 import classnames from "classnames";
-import CustomizedSteppers from "../../Scheduler2/Panel/LVS-workflow";
 
 
 class VrHeader extends React.Component {
@@ -38,12 +37,24 @@ class VrHeader extends React.Component {
       case 2: return ("To Load");
       case 3: return ("Loaded");
       case 4: return ("Confirmed");
-      case 5: return ("Trip_Completed");
-      case 6: return ("Unloaded");
+      case 5: return ("Trip Completed");
+      case 6: return ("Unloaded In Stagging Location");
       case 7: return ("Returned");
       case 8: return ("ALL");
       case 9: return ("Checked In");
       case 10: return ("Checked Out");
+       case 11: return ("Loads In Completed");
+            case 12: return ("Counts In Process");
+            case 13: return ("Casheir Reconciliation Completed");
+            case 14: return ("In Route Settlement");
+            case 15: return ("To Allocate");
+            case 16: return ("Allocated");
+            case 17: return ("Picking");
+            case 18: return ("Pick Completed");
+            case 19: return ("Verified");
+            case 20: return ("In-Route");
+            case 21: return ("Loads In Reconciled");
+                        case 22: return ("Reconciled");
       default: return ("ToLoad");
     }
   }
@@ -61,43 +72,22 @@ class VrHeader extends React.Component {
   }
 
   validateTrip = (i, type) => {
-    console.log("inside valdiateTRip from header",this.props.selectedVrIndex);
-    this.props.validateonly(this.props.selectedVrIndex, "vrHeader")
+    this.props.validateonly(i, type)
   }
-
-  confirmLVS = (lvscode
-    // , i, type
-  ) => {
-    console.log("inside confirmLVS")
-    this.props.confirmLVSbyCode(this.props.loadvehstck.vcrnum, this.props.selectedVrIndex, 'vrHeader');
-  };
-
-  ToPickData = () => {
-    this.props.ToPickDatafromVR(this.props.vrdata.xnumpc);
-  };
-
-  ToAllocationGetData = () => {
-    this.props.ToAllocationGetDatafromVR(
-      this.props.vrdata.xnumpc,
-      this.props.vrdata.fcy
-    );
-  };
-
-
 
 
   CheckDocumentStatuForValidation = (index, type, docStatus) => {
 
-    if (docStatus === 'Deliverable') {
+    // if (docStatus === 'Deliverable') {
       // this.CheckValiationStatus(index);
       this.props.validateonly(index, type)
-    }
-    else {
-      this.setState({
-        errorMessage: 'Documents in Trips are not in Deliverable Status',
-        addAlertShow: true
-      });
-    }
+    // }
+    // else {
+    //   this.setState({
+    //     errorMessage: 'Documents in Trips are not in Deliverable Status',
+    //     addAlertShow: true
+    //   });
+    // }
   }
 
 
@@ -107,13 +97,11 @@ class VrHeader extends React.Component {
     var trip = this.props.tripdetails;
     let addAlertClose = () => this.setState({ addAlertShow: false });
     const op_status = this.props.vrdata.optimsta;
-    console.log("op status =", op_status);
     const dis_status = this.props.vrdata.dispstat;
-    console.log("dis_status =", dis_status);
-    const BL_createdDate = moment(trip.credattim).format('MM-DD-YYYY');
-    const TExecutionDate = moment(this.props.vrdata.datexec).format('MM-DD-YYYY');
-    const ScheduledDate = moment(this.props.vrdata.datliv).format('MM-DD-YYYY');
-    const Sch_Return_Date = moment(this.props.vrdata.datarr).format('MM-DD-YYYY');
+    const BL_createdDate = moment(trip.credattim).format('YYYY-MM-DD');
+    const TExecutionDate = moment(this.props.vrdata.credat).format('MM-DD-YYYY');
+    const ScheduledDate = moment(this.props.vrdata.datliv).format('YYYY-MM-DD');
+    const Sch_Return_Date = moment(this.props.vrdata.datarr).format('YYYY-MM-DD');
     const ExecutionTime = moment(this.props.vrdata.heuexec).format('hh:mm');
     const Sch_DepartureTime = this.props.vrdata.heudep;
     const Sch_ReturnTime = this.props.vrdata.heuarr;
@@ -122,8 +110,8 @@ class VrHeader extends React.Component {
     const dummyDate = moment(this.props.vrdata.adatliv).format('MM-DD-YYYY')
     const TempDate = moment(this.props.vrdata.adatarr).format('MM-DD-YYYY')
     const Temptype = this.props.vrdata.xvry;
-    const vr_url = `${process.env.REACT_APP_X3_URL}/$sessions?f=GESXX10CPLC/2//M/` + this.props.vrdata.xnumpc;
-    const loadvehstock_url = `${process.env.REACT_APP_X3_URL}/$sessions?f=GESXX10CS/2//M/` + this.props.loadvehstck.vcrnum;
+    const vr_url = `${process.env.REACT_APP_X3_URL_EXTERNAL}/$sessions?f=GESXX10CPLC/2//M/` + this.props.vrdata.xnumpc;
+    const loadvehstock_url = `${process.env.REACT_APP_X3_URL_EXTERNAL}/$sessions?f=GESXX10CS/2//M/` + this.props.loadvehstck.vcrnum;
     let lvs_number = "";
     if (this.props.loadvehstck.vcrnum == null) {
       lvs_number = '';
@@ -186,38 +174,15 @@ class VrHeader extends React.Component {
                 </CardTitle>
               </Col>
               <Col md="6" className="text-right">
-                {trip.lock &&
-                  // <div style={{ pointerEvents: 'auto', float: 'right', marginRight: '15px', marginTop: '10px' }}>
-                  //   {this.props.selectedVrValidated ?
-                  //     <label style={{ 'backgroundColor': 'green', 'color': 'white', 'textAlign': 'center', 'fontSize': '14pt', 'height': '30px', 'width': '150px' }}>VALIDATED</label> :
-                  //     <button color="primary"
-                  //       onClick={() => this.CheckDocumentStatuForValidation(this.props.selectedVrIndex, "vrHeader", trip.pendingDocStatus)}>VALIDATE</button>
-                  //   }
-                  // </div>
-                  // : <></>
-
-                  (
-                        <div>
-                                        <CustomizedSteppers
-                                          IsOnlyDeliveryflg = {this.props.IsOnlyDeliveryflg}
-                                          vrdata={this.props.vrdata}
-                                          lvsData={this.props.loadvehstck}
-                                          createLVS={this.validateTrip}
-                                          pickTicketflg={this.props.pickTicketflg}
-                                          onlyReceiptflg={this.props.onlyReceiptflg}
-                                          ToPickData={this.ToPickData}
-                                          toPickDataList={this.props.toPickDataList}
-                                          ToAllocationData={this.ToAllocationGetData}
-                                          toAllocationDataList={this.props.toAllocationDataList}
-                                          SubmitforAllocation={this.SubmitforAllocation}
-                                          selectedVrValidated={this.props.selectedVrValidated}
-                                          confirmLVS={this.confirmLVS}
-                                        />
-                                      </div>
-                  )
-                  
-                  
-                  }
+                {trip.lock ?
+                  <div style={{ pointerEvents: 'auto', float: 'right', marginRight: '15px', marginTop: '10px' }}>
+                    {this.props.selectedVrValidated ?
+                      <label style={{ 'backgroundColor': 'green', 'color': 'white', 'textAlign': 'center', 'fontSize': '14pt', 'height': '30px', 'width': '150px' }}>VALIDATED</label> :
+                      <button color="primary"
+                        onClick={() => this.CheckDocumentStatuForValidation(this.props.selectedVrIndex, "vrHeader", trip.pendingDocStatus)}>VALIDATE</button>
+                    }
+                  </div>
+                  : <></>}
               </Col>
 
             </Row>
@@ -228,11 +193,11 @@ class VrHeader extends React.Component {
               <Col lg="3" xl="2">
                 <p className="mb-1">{this.props.t('RouteNum')}</p>
                 {trip.lock ?
-                  <p className="h6 mb-0 text-primary">
+                  <p className="h6 mb-0 text-primary" style={{fontWeight: "bold", textDecorationLine: "underline"}}>
                     <a target="_blank" href={vr_url}>{this.props.vrdata.xnumpc} </a>
                   </p>
                   :
-                  <p className="h6 mb-0 text-primary">
+                  <p className="h6 mb-0 text-primary" style={{fontWeight: "bold", textDecorationLine: "underline"}}>
                     <h5 style={{ color: 'grey' }}> {trip.itemCode} </h5>
                   </p>
                 }
@@ -240,7 +205,7 @@ class VrHeader extends React.Component {
               </Col>
               <Col lg="3" xl="2">
                 <p className="mb-1">{this.props.t('VehLoadStockNumber')}</p>
-                <p className="h6 mb-0 text-primary">
+                <p className="h6 mb-0 text-primary" style={{fontWeight: "bold", textDecorationLine: "underline"}}>
                   <a target="_blank" href={loadvehstock_url}>{trip.lock ? lvs_number : ''} </a>
                 </p>
                 <hr className="mt-1" />
@@ -288,7 +253,7 @@ class VrHeader extends React.Component {
               </Col>
               <Col lg="3" xl="2">
                 <p className="mb-1">{this.props.t('DriverId')}</p>
-                <p className="mb-0 h6">{trip.lock ? this.props.vrdata.driverid === "null" ? '' : this.props.vrdata.driverid : trip.driverId === "null" ? '' : trip.driverId }</p>
+                <p className="mb-0 h6">{trip.lock ? this.props.vrdata.driverid === "null" ? '' : this.props.vrdata.driverid : trip.driverId}</p>
                 <hr className="mt-1" />
               </Col>
               <Col lg="3" xl="2">
@@ -311,7 +276,16 @@ class VrHeader extends React.Component {
                 <p className="mb-0 h6">{trip.lock ? this.props.vrdata.xroutnbr : trip.trips}</p>
                 <hr className="mt-1" />
               </Col>
-
+<Col lg="3" xl="2">
+                <p className="mb-1">{this.props.t('Total Pallets')}</p>
+                <p className="mb-0 h6">{trip.lock ? parseFloat(this.props.vrdata.totalCases).toFixed(2) : parseFloat(trip.totalCases).toFixed(2)} PAL</p>
+                <hr className="mt-1" />
+              </Col>
+                              <Col lg="3" xl="2">
+                <p className="mb-1">Creation User</p>
+                <p className="mb-0 h6">{trip?.xusrcode}</p>
+                <hr className="mt-1" />
+              </Col>
             </Row>
             <Row>
               <Col lg="6">
@@ -324,33 +298,22 @@ class VrHeader extends React.Component {
                 <Row className="mt-3">
                   <Col md="6" lg="3">
                     <p className="mb-1">Departure Date</p>
-                    <p className="mb-0 h6">
-                    {trip.lock
-                                              ? ScheduledDate
-                                              : trip.optistatus === "Optimized"
-                                              ? moment(trip.docdate).format("MM-DD-YYYY")
-                                              : moment(trip.docdate).format("MM-DD-YYYY")}</p>
+                    <p className="mb-0 h6">{trip.lock ? moment(ScheduledDate).format("MM-DD-YYYY") : ''}</p>
                     <hr className="mt-1" />
                   </Col>
                   <Col md="6" lg="3">
                     <p className="mb-1">Departure Time</p>
-                    <p className="mb-0 h6">
-                                                                   {trip.lock
-                                                                     ? Sch_DepartureTime
-                                                                     : trip.optistatus === "Optimized"
-                                                                     ? trip.startTime
-                                                                     : trip.startTime}
-                                                                 </p>
+                    <p className="mb-0 h6">{trip.lock ? Sch_DepartureTime : ''}</p>
                     <hr className="mt-1" />
                   </Col>
                   <Col md="6" lg="3">
                     <p className="mb-1">Return Date</p>
-                    <p className="mb-0 h6">{trip.lock ? moment(Sch_Return_Date).format("MM-DD-YYYY") : trip.optistatus === "Optimized" ?  moment(trip.endDate).format("MM-DD-YYYY")   :  ''}</p>
+                    <p className="mb-0 h6">{trip.lock ? moment(Sch_Return_Date).format("MM-DD-YYYY") : ''}</p>
                     <hr className="mt-1" />
                   </Col>
                   <Col md="6" lg="3">
                     <p className="mb-1">Return Time</p>
-                    <p className="mb-0 h6">{trip.lock ? Sch_ReturnTime : trip.optistatus === "Optimized" ? trip.endTime  : ''}</p>
+                    <p className="mb-0 h6">{trip.lock ? Sch_ReturnTime : ''}</p>
                     <hr className="mt-1" />
                   </Col>
                 </Row>
